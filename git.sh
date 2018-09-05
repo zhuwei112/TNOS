@@ -1,15 +1,15 @@
 if [  $1!='' ]
 then
-   msg=$1;
+    msg=$1;
 else
-   msg="bug"; 
+    msg="bug"; 
 fi
 
 if [  $2!='' ]
 then
-   brach=$2;
+    brach=$2;
 else
-   brach="master"; 
+    brach="master"; 
 fi
 
 git add README_Chinese.md
