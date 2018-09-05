@@ -2,7 +2,7 @@ if [  $1!='' ]
 then
     msg=$1;
 else
-    msg="bug"; 
+    exit 1
 fi
 
 if [  $2!='' ]
@@ -52,5 +52,5 @@ git add tnos/utility/*.c
 git add tnos/utility/*.h
 
 
-git commit -m '$msg'
-git push  origin '$brach'
+git commit -m "$msg"
+git push  origin "$brach"
