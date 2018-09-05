@@ -52,5 +52,5 @@ git add tnos/utility/*.c
 git add tnos/utility/*.h
 
 
-git commit -m "$msg"
-git push  origin "$brach"
+git commit -m $msg
+git push  origin $brach
