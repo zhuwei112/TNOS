@@ -2,7 +2,14 @@ if [  $1!='' ]
 then
    msg=$1;
 else
-    msg="bug"; 
+   msg="bug"; 
+fi
+
+if [  $2!='' ]
+then
+   brach=$2;
+else
+   brach="master"; 
 fi
 
 git add README_Chinese.md
@@ -46,4 +53,4 @@ git add tnos/utility/*.h
 
 
 git commit -m '$msg'
-git push  origin master
+git push  origin '$brach'
