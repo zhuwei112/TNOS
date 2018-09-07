@@ -385,7 +385,9 @@ static void tnos_insert_delay(tnos_tcb_t *ptcb, u32 *pnext_time)
 {
     list_t *plist;
 
+#if (TNOS_DBG_USE != 0)
     TNOS_ASSERT(ptcb != &gs_idle_tcb);
+#endif
 
     //按时间由小到大排列
     for (plist = gs_list_head_delay.next; plist != &gs_list_head_delay; plist = plist->next)
@@ -425,7 +427,9 @@ static void tnos_set_ready_wait(tnos_tcb_t *ptcb)
 {
     TNOS_DBG("READ wait[%u] [%s]", ptcb->pro, ptcb->name);
 
+#if (TNOS_DBG_USE != 0)
     TNOS_ASSERT(ptcb != &gs_idle_tcb);
+#endif
 
     gs_rdy_wait_grop |= BIT(ptcb->pro);
     ptcb->ms_less = ptcb->mss;
@@ -445,7 +449,9 @@ static void tnos_set_ready(tnos_tcb_t *ptcb, BOOL is_after)
 {
     TNOS_DBG("READ[%u] [%s]", ptcb->pro, ptcb->name);
 
+#if (TNOS_DBG_USE != 0)
     TNOS_ASSERT(ptcb != &gs_idle_tcb);
+#endif
 
     if (ptcb->list_run.next == NULL) //在队列中不动(防止gs_rdy_grop 对优先级判断不对)
     {//防止在准备队列中被重新分配时间片
