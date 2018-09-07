@@ -1,0 +1,14 @@
+.\objects\tnos_test.o: ..\..\..\..\tnos\tnos_test.c
+.\objects\tnos_test.o: ..\..\..\..\tnos\utility\xutils.h
+.\objects\tnos_test.o: ..\..\..\..\tnos\tnos_def.h
+.\objects\tnos_test.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\tnos_test.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\tnos_test.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\tnos_test.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h
+.\objects\tnos_test.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\tnos_test.o: ..\..\..\..\tnos\utility\xprintf.h
+.\objects\tnos_test.o: ..\..\..\..\tnos\utility\xtimer.h
+.\objects\tnos_test.o: ..\..\..\stm32_f10x\system_init.h
+.\objects\tnos_test.o: ..\..\..\..\tnos\souce\tnos.h
+.\objects\tnos_test.o: ..\..\..\..\tnos\utility\clist.h
+.\objects\tnos_test.o: ..\..\..\..\tnos\tnos_cfg.h

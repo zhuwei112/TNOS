@@ -47,34 +47,26 @@ BOOL xprintf_get_char(char *pval)
  ***********************************************************/
 void xvprintf(const char *pfmt, va_list va, BOOL use_irq)
 {
-    u32 reg;
     int len;
 
-    reg = irq_disable();
+    irq_disable();
+
     len = xvsnprintf(gs_printf_ctrl.pbuf_fmt, gs_printf_ctrl.pbuf_fmt_len - 3, pfmt, va);
 
     if (len > 0)
     {
+		const char *prd;
+		
         gs_printf_ctrl.pbuf_fmt[len++] = '\r';
-        gs_printf_ctrl.pbuf_fmt[len++] = '\n';
-        gs_printf_ctrl.pbuf_fmt[len] = 0;
+        gs_printf_ctrl.pbuf_fmt[len] = '\n';
+        prd = gs_printf_ctrl.pbuf_fmt;
 
         if (use_irq)
         {
-            const char *prd = gs_printf_ctrl.pbuf_fmt;
+            char *pnext = (char *)gs_printf_ctrl.pw;
 
-            while (1)
+            while (len--)
             {
-                char *pnext;
-                char c = *prd++;
-
-                if (c == 0)
-                {
-                    break;
-                }
-
-                pnext = (char *)gs_printf_ctrl.pw;
-
                 if ((u32)(++pnext) >= (u32)gs_printf_ctrl.pend)
                 {
                     pnext = gs_printf_ctrl.pst;
@@ -82,11 +74,12 @@ void xvprintf(const char *pfmt, va_list va, BOOL use_irq)
 
                 if (pnext != gs_printf_ctrl.pr)
                 {
-                    *gs_printf_ctrl.pw = c;
+                    *gs_printf_ctrl.pw = *prd++;
                     gs_printf_ctrl.pw = pnext;
                 }
                 else //»º´æ²»¹»
                 {
+                    break;
                 }
             }
 
@@ -94,21 +87,14 @@ void xvprintf(const char *pfmt, va_list va, BOOL use_irq)
         }
         else
         {
-            while (1)
+            while (len--)
             {
-                char c = *gs_printf_ctrl.pbuf_fmt++;
-
-                if (c == 0)
-                {
-                    break;
-                }
-
-                xprintf_put_char(c);
+                xprintf_put_char(*prd++);
             }
         }
     }
 
-    irq_enable(reg);
+    irq_enable();
 }
 
 /***********************************************************

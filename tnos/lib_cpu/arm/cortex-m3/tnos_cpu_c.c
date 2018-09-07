@@ -12,14 +12,22 @@
 
 #define TNOS_STK_FULL  0xFECB1DC7   //堆填充的数据
 
-#ifndef  D_NVIC_INT_CTRL
-#define  D_NVIC_INT_CTRL      *((u32 *)0xE000ED04)
-#endif
+extern void __set_PSP(u32 topOfProcStack);
 
-#ifndef  D_NVIC_PENDSVSET
-#define  D_NVIC_PENDSVSET     0x10000000
-#endif
+#define NVIC_SYSPRI2     0xE000ED20
+#define NVIC_PENDSV_PRI  0x00FF0000
 
+/***********************************************************
+ * 功能描述：开始运行就绪任务
+ * 输入参数：无
+ * 输出参数： 无
+ * 返 回 值：  无
+ ***********************************************************/
+void tnos_start_rdy(void)
+{
+    *((u32 *)NVIC_SYSPRI2) |= NVIC_PENDSV_PRI;
+    __set_PSP(0);
+}
 
 /***********************************************************
  * 功能描述：初始化任务堆栈
@@ -80,17 +88,6 @@ u32 tnos_taks_stk_check(u32 *pstk_addr, u32 stk_size)
     }
 
     return i;
-}
-
-/***********************************************************
- * 功能描述：任务切换
- * 输入参数：无
- * 输出参数： 无
- * 返 回 值：  无
- ***********************************************************/
-void tnos_task_sw(void)
-{
-    D_NVIC_INT_CTRL = D_NVIC_PENDSVSET; //挂起pendsvc
 }
 
 

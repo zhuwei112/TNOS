@@ -21,6 +21,7 @@
 
 #if 0 //测试任务切换是否正常,堆栈
 
+#define __ASM            __asm
 
 static tnos_tcb_t tcb_main;
 static u32 stk_main[128];
@@ -34,23 +35,38 @@ static u32 stk_m2[128];
 
 #include "tnos_cpu_c.h"
 
-uint32_t set_r6(u32 val)
+static void set_r6(u32 val)
 {
- register uint32_t __regAPSR          __ASM("r6");
- __regAPSR = val;
+    register u32 __regAPSR  __ASM("r6");
+    __regAPSR = val;
+}
+
+static __ASM u32 get_MSP(void)
+{
+    mrs r0, msp
+    bx lr
+}
+
+
+static __ASM u32 get_PSP(void)
+{
+    mrs r0, psp
+    bx lr
 }
 
 void te1(void)
 {
     u32 i = 0;
 
-    u32 reg;
-    reg = irq_disable();
+    irq_disable();
     for (i = 0; i < 100; i++); {};
 
     for (i = 0; i < 100; i++); {};
-    irq_enable(reg) ;
+    irq_enable() ;
 }
+
+#undef  TNOS_SLICE_MS
+#define TNOS_SLICE_MS   200
 
 /***********************************************************
  * 函数名称：task_main
@@ -61,26 +77,27 @@ void te1(void)
  ***********************************************************/
 static void task_main(void *p_arg)
 {
-
-    {
-        u32 i = 0;
-
-        u32 reg;
-        reg = irq_disable();
-
-        OS_TASK_SW();
-        for (i = 0; i < 100; i++); {};
-
-        te1();
-
-        for (i = 0; i < 100; i++); {};
-        irq_enable(reg) ;
-
-    }
+//
+//    {
+//        u32 i = 0;
+//
+//        u32 reg;
+//        reg = irq_disable();
+//
+//        OS_TASK_SW();
+//        for (i = 0; i < 100; i++); {};
+//
+//        te1();
+//
+//        for (i = 0; i < 100; i++); {};
+//        irq_enable(reg) ;
+//
+//    }
 
     while (1)
     {
         u32 a0, a1, a2, a3, a4, a5, a6, a7, a8 ,b0;
+        u32 msp, psp;
 
         a7 = 0x10101010;
         a6 = 0x20202020;
@@ -92,17 +109,17 @@ static void task_main(void *p_arg)
         a1 = 0x70707070;
         a0 = 0x80808080;
 
-        u32 msp;
-        msp = __get_MSP();
-
         set_r6(0x12345678);
 
-        DBG("A[0X%08X\r\n", msp);
+        msp = get_MSP();
+        psp = get_PSP();
+        DBG("A[0X%08X][0X%08X]\r\n", msp, psp);
 
 //        tnos_delay_ms(100);
         tnos_sched();
-        msp = __get_MSP();
-        DBG("B[0X%08X]", msp);
+        msp = get_MSP();
+        psp = get_PSP();
+        DBG("B[0X%08X][0X%08X]", msp, psp);
         b0 = 1;
         ++a0;
         ++a1;
@@ -131,6 +148,7 @@ static void task_m(void *p_arg)
     while (1)
     {
         u32 a0, a1, a2, a3, a4, a5, a6, a7, a8 ,b0;
+        u32 msp, psp;
 
         a0 = 0x10101010;
         a1 = 0x20202020;
@@ -142,13 +160,14 @@ static void task_m(void *p_arg)
         a6 = 0x70707070;
         a7 = 0x80808080;
 
-        u32 msp;
-        msp = __get_MSP();
-        DBG("a[0X%08X\r\n", msp);
+        msp = get_MSP();
+        psp = get_PSP();
+        DBG("a[0X%08X][0X%08X]\r\n", msp, psp);
 //        tnos_delay_ms(100);
-                tnos_sched();
-        msp = __get_MSP();
-        DBG("b[0X%08X]", msp);
+        tnos_sched();
+        msp = get_MSP();
+        psp = get_PSP();
+        DBG("b[0X%08X][0X%08X]", msp, psp);
         b0 = 1;
         ++a0;
         ++a1;
@@ -723,7 +742,7 @@ void tnos_app_init(void)
 //测试信号量 切换速度  多个
 #if 1
 
-static tnos_tcb_t tcb[31];
+static tnos_tcb_t tcb[20];
 static tnos_sem_t sem[ARRAY_SIZE(tcb)];
 static u32 stk[ARRAY_SIZE(tcb)][128];
 static u32 sw = 0;
@@ -743,10 +762,11 @@ static void task1(void *p_arg)
 {
     ttimer_t tm_wait;
     ttimer_t tm;
+    u8 pos, sem_pos;
     ttimer_set(&tm, TIMER_S(1));
 
-    u8 pos = (u32)p_arg;
-    u8 sem_pos = pos;
+    pos = (u32)p_arg;
+    sem_pos = pos;
 
     if (++sem_pos >= ARRAY_SIZE(tcb))
     {
@@ -782,6 +802,7 @@ static void task1(void *p_arg)
 
 }
 
+//21514
 /***********************************************************
  * 功能描述：信号量测试
  * 输入参数：无
@@ -790,7 +811,9 @@ static void task1(void *p_arg)
  ***********************************************************/
 void tnos_app_init(void)
 {
-    for (u32 i = 0; i < ARRAY_SIZE(tcb); i++)
+    u32 i;
+
+    for (i = 0; i < ARRAY_SIZE(tcb); i++)
     {
         char name[20];
         XSNPRINTF(name, "TK%u", i);
@@ -811,108 +834,6 @@ void tnos_app_init(void)
     }
 
     tnos_sem_post(&sem[0]);
-}
-
-#endif
-
-
-//测试信号量
-#if 0
-
-static tnos_tcb_t tcb[31];
-static tnos_sem_t sem[ARRAY_SIZE(tcb)];
-static u32 stk[ARRAY_SIZE(tcb)][128];
-static u32 sw = 0;
-static u32 gs_delay_tab[ARRAY_SIZE(tcb) + 1];
-static u32 gs_wait_tab[ARRAY_SIZE(tcb) + 1];
-
-static u32 gs_cnt = 0;
-static u32 gs_cnt_all = 0;
-
-/***********************************************************
- * 功能描述：任务1
- * 输入参数：无
- * 输出参数：无
- * 返 回 值：  无
- ***********************************************************/
-static void task1(void *p_arg)
-{
-    ttimer_t tm_wait;
-    ttimer_t tm;
-    ttimer_set(&tm, TIMER_S(5));
-
-    u8 pos = (u32)p_arg;
-    u8 sem_pos = pos;
-
-    if (++sem_pos >= ARRAY_SIZE(tcb))
-    {
-        sem_pos = 0;
-    }
-
-    while (1)
-    {
-        if (pos == 0)
-        {
-            tnos_delay_ms(10);
-        }
-
-         if (tnos_sem_wait(&sem[pos], gs_wait_tab[pos]) <= 0)
-         {
-             DBG("err: pos[%u],cnt[%u],all[%u]", pos, gs_cnt, gs_cnt_all);
-             while (1)
-             {
-             }
-         }
-
-         ++gs_cnt;
-         ++gs_cnt_all;
-         ttimer_set(&tm_wait, gs_delay_tab[pos]);
-
-         if (pos == 0)
-         {
-             if (ttimer_is_timeout(&tm))
-             {
-                 u32 cnt = gs_cnt;
-                 ttimer_repeat_abs(&tm);
-
-                 gs_cnt = 0;
-                 DBG("cnt: [%u],[%u]", cnt, gs_cnt_all);
-             }
-         }
-
-         ttimer_wait_timeout(&tm_wait); //消耗时间片
-         tnos_sem_post(&sem[sem_pos]);
-    }
-
-}
-
-/***********************************************************
- * 功能描述：信号量测试
- * 输入参数：无
- * 输出参数：无
- * 返 回 值：  无
- ***********************************************************/
-void tnos_app_init(void)
-{
-    for (u32 i = 0; i < ARRAY_SIZE(tcb); i++)
-    {
-        char name[20];
-        XSNPRINTF(name, "TK%u", i);
-        tnos_task_create(&tcb[i], name, TNOS_PRO_MID, TNOS_SLICE_MS, task1, (void *)i, stk[i], ARRAY_SIZE(stk[i]));
-
-        if (i < ARRAY_SIZE(tcb)/2)
-        {
-            gs_delay_tab[i] = 3 + i;
-            gs_wait_tab[i] = 500 + i;
-        }
-        else
-        {
-            gs_delay_tab[i] = 3  + ARRAY_SIZE(tcb) - i;
-            gs_wait_tab[i] = 500 + ARRAY_SIZE(tcb) - i;
-        }
-
-        tnos_sem_init(&sem[i], 0);
-    }
 }
 
 #endif

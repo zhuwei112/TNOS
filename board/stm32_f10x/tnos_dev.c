@@ -21,6 +21,7 @@ static char gs_buf_send_irq[2000];    //打印中断输出缓冲区(最大缓存的内容)
 
 #define TICK_TIME_MS  (1000*9)
 #define TICK_TIME_LOAD (1000*TICK_TIME_MS - 1)    //重载时间
+#define TIME_MS_PSC    (64)                       //变为ms的分频,必须为2的n次幂
 
 /***********************************************************
  * 功能描述：毫秒定时器初始化
@@ -40,7 +41,7 @@ void tnos_tim_ms_init(void)
 
     TIM4->CR1 = 0;
     RCC->APB1ENR |= RCC_APB1Periph_TIM4;    //时钟使能
-    TIM4->PSC = (72000/2)/32;               //时钟分频
+    TIM4->PSC =  72000/TIME_MS_PSC;         //时钟分频
     TIM4->DIER = TIM_DIER_UIE;              //允许更新中断
 }
 
@@ -60,15 +61,15 @@ void tnos_tim_ms_set(u32 ms)
     TIM4->SR = 0;
     TIM4->EGR |= TIM_EGR_UG; //重新初始化计数器，并产生一个更新事件
 
-    delay = ms*2*32;  //2*32 保证ms的分辨率( 2的N次幂方便计算)
+    delay = ms*TIME_MS_PSC;  //保证ms的分辨率( 2的N次幂方便计算)
 
     if (delay < 8)
     {
         delay = 8;
     }
-    else if (delay > 2*32*1000)
+    else if (delay > TIME_MS_PSC*1000)
     {
-        delay = 2*32*1000;
+        delay = TIME_MS_PSC*1000;
     }
 
     TIM4->ARR = delay;
@@ -277,6 +278,7 @@ void xprintf_msg_put_irq(void)
         SET_BIT(USART1->CR1, USART_CR1_TXEIE);
     }
 }
+
 
 #if 0 //测试定时器
 

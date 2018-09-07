@@ -349,7 +349,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>4</Optim>
+            <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -369,7 +369,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\Libraries\CMSIS;..\..\Libraries\FWlib\inc;..\..\User\BSP;..\..\..\stm32_f10x;..\..\..\..\tnos;..\..\..\..\tnos\lib_cpu\arm;..\..\..\..\tnos\souce;..\..\..\..\tnos\utility</IncludePath>
+              <IncludePath>..\..\Libraries\CMSIS;..\..\Libraries\FWlib\inc;..\..\User\BSP;..\..\..\stm32_f10x;..\..\..\..\tnos;..\..\..\..\tnos\lib_cpu\arm\cortex-m3;..\..\..\..\tnos\souce;..\..\..\..\tnos\utility</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>

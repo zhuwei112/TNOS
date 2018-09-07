@@ -58,11 +58,10 @@ static void do_msgq_clean(tnos_msgq_t *pmsgq)
 s32 tnos_msgq_init(tnos_msgq_t *pmsgq, u32 msg_size, void *pbuf, u32 buf_size)
 {
     u32 addr, less;
-    u32 reg;
 
     TNOS_ASSERT((pmsgq != NULL) && (pbuf != NULL) && (buf_size > (sizeof(tnos_msgq_data_t) + msg_size)) && (msg_size != 0));
 
-    reg = irq_disable();
+    irq_disable();
     memset(pmsgq, 0, sizeof(tnos_msgq_t));
 
     addr = ALIGN_UP((u32)pbuf, 4);
@@ -70,7 +69,7 @@ s32 tnos_msgq_init(tnos_msgq_t *pmsgq, u32 msg_size, void *pbuf, u32 buf_size)
 
     if (less >= buf_size)
     {
-        irq_enable(reg);
+        irq_enable();
 
         return TNOS_ERR_ARG;
     }
@@ -86,7 +85,7 @@ s32 tnos_msgq_init(tnos_msgq_t *pmsgq, u32 msg_size, void *pbuf, u32 buf_size)
 
     if ((pmsgq->num_max == 0) || (pmsgq->num_max >= 0xFFFF))
     {
-        irq_enable(reg);
+        irq_enable();
 
         return TNOS_ERR_ARG;
     }
@@ -95,7 +94,7 @@ s32 tnos_msgq_init(tnos_msgq_t *pmsgq, u32 msg_size, void *pbuf, u32 buf_size)
     pmsgq->pbuf = (u8*)pbuf;
     tnos_singal_init(&pmsgq->singal, 0);
     do_msgq_clean(pmsgq);
-    irq_enable(reg);
+    irq_enable();
 
     return TNOS_ERR_NONE;
 }
@@ -108,11 +107,9 @@ s32 tnos_msgq_init(tnos_msgq_t *pmsgq, u32 msg_size, void *pbuf, u32 buf_size)
  ***********************************************************/
 void tnos_msgq_clean(tnos_msgq_t *pmsgq)
 {
-    u32 reg;
-
-    reg = irq_disable();
+    irq_disable();
     do_msgq_clean(pmsgq);
-    irq_enable(reg);
+    irq_enable();
 }
 
 /***********************************************************
@@ -127,7 +124,6 @@ s32 tnos_msgq_send_ptr(tnos_msgq_t *pmsgq, tnos_msgq_data_t **pmsgq_data)
 {
     u16 pos;
     tnos_msgq_data_t *pdata;
-    u32 reg;
 
     TNOS_ASSERT((pmsgq != NULL) && (pmsgq_data != NULL));
 
@@ -138,17 +134,17 @@ s32 tnos_msgq_send_ptr(tnos_msgq_t *pmsgq, tnos_msgq_data_t **pmsgq_data)
         return TNOS_ERR_OTHER;
     }
 
-    reg = irq_disable();
+    irq_disable();
     if (pmsgq->pos_empty == 0)
     {
-        irq_enable(reg);
+        irq_enable();
         return TNOS_ERR_FULL;
     }
 
     pos = pmsgq->pos_empty;
     pdata = POS2ADDR(pos);
     pmsgq->pos_empty = pdata->pos_next;
-    irq_enable(reg);
+    irq_enable();
 
     *pmsgq_data = pdata;
     return TNOS_ERR_NONE;
@@ -165,20 +161,18 @@ s32 tnos_msgq_send_ptr(tnos_msgq_t *pmsgq, tnos_msgq_data_t **pmsgq_data)
 ***********************************************************/
 s32 tnos_msgq_send_ptr_next(tnos_msgq_t *pmsgq, tnos_msgq_data_t *pmsgq_data, u32 data_len, BOOL is_first)
 {
-    u32 reg;
     u16 pos;
 
     TNOS_ASSERT((pmsgq != NULL) && (pmsgq_data != NULL))
 
     pos = ADDR2POS(pmsgq_data);
 
-    reg = irq_disable();
-
+    irq_disable();
     if (data_len > pmsgq->size) //不允许发送长度超过缓冲区
     {
         pmsgq_data->pos_next = pmsgq->pos_empty;
         pmsgq->pos_empty = pos;
-        irq_enable(reg);
+        irq_enable();
 
         return TNOS_ERR_ARG;
     }
@@ -223,7 +217,7 @@ s32 tnos_msgq_send_ptr_next(tnos_msgq_t *pmsgq, tnos_msgq_data_t *pmsgq_data, u3
 
         tnos_singal_send(&pmsgq->singal);
     }
-    irq_enable(reg);
+    irq_enable();
 
     return TNOS_ERR_NONE;
 }
@@ -301,7 +295,6 @@ s32 tnos_msgq_send_frist(tnos_msgq_t *pmsgq, const void *pbuf, u32 len)
  ***********************************************************/
 s32 tnos_msgq_rev_ptr(tnos_msgq_t *pmsgq, tnos_msgq_data_t **pmsgq_data, u32 timeout_ms)
 {
-    u32 reg;
     tnos_msgq_data_t *pdata;
     u16 pos;
     s32 num;
@@ -316,12 +309,12 @@ s32 tnos_msgq_rev_ptr(tnos_msgq_t *pmsgq, tnos_msgq_data_t **pmsgq_data, u32 tim
         return TNOS_ERR_OTHER;
     }
 
-    reg = irq_disable();
-    num = tnos_singal_wait_ms(&pmsgq->singal, timeout_ms, &reg);
+    irq_disable();
+    num = tnos_singal_wait_ms(&pmsgq->singal, timeout_ms);
 
     if (num <= 0)
     {
-        irq_enable(reg);
+        irq_enable();
 
         return TNOS_ERR_TIMEOUT;
     }
@@ -330,7 +323,7 @@ s32 tnos_msgq_rev_ptr(tnos_msgq_t *pmsgq, tnos_msgq_data_t **pmsgq_data, u32 tim
 
     if (pos == 0) //出现BUG,才会有
     {
-        irq_enable(reg);
+        irq_enable();
 
         return TNOS_ERR_BUG;
     }
@@ -345,7 +338,7 @@ s32 tnos_msgq_rev_ptr(tnos_msgq_t *pmsgq, tnos_msgq_data_t **pmsgq_data, u32 tim
     {
         pmsgq->pos_head = pdata->pos_next;
     }
-    irq_enable(reg);
+    irq_enable();
 
     *pmsgq_data = pdata;
 
@@ -368,15 +361,13 @@ s32 tnos_msgq_rev_ptr(tnos_msgq_t *pmsgq, tnos_msgq_data_t **pmsgq_data, u32 tim
 ***********************************************************/
 void tnos_msgq_rev_ptr_next(tnos_msgq_t *pmsgq, tnos_msgq_data_t *pmsgq_data)
 {
-    u32 reg;
-
     TNOS_ASSERT((pmsgq != NULL) && (pmsgq_data != NULL))
 
-    reg = irq_disable();
+    irq_disable();
     //加入到空队列中
     pmsgq_data->pos_next = pmsgq->pos_empty;
     pmsgq->pos_empty = ADDR2POS(pmsgq_data);
-    irq_enable(reg);
+    irq_enable();
 }
 
 /***********************************************************

@@ -42,8 +42,10 @@ static tnos_tcb_t gs_idle_tcb;            //空闲任务tcb
 static list_t gs_list_head_delay; //等待运行队列头部
 static list_t gs_list_rdy[2][TNOS_PRO_MAX]; //就绪队列, 就绪等待队列
 static list_t *gs_prdy, *gs_prdy_wait;     //就绪队列指针, 就绪等待队列指针
+static volatile s16  gs_tnos_shed_lock_cnt = 0; //调度锁的次数
+static volatile s16 gs_irq_cnt = 0; //中断嵌套的个数
 static u8 gs_rdy_grop, gs_rdy_wait_grop;  //就绪队列组, 就绪等待队列指针组
-static volatile s16  gs_tnos_shed_lock_cnt; //调度锁的次数
+
 
 //最高任务所在的位置
 const static u8 gs_higth_rdy_tab[] =
@@ -51,6 +53,41 @@ const static u8 gs_higth_rdy_tab[] =
      0xFF, 0, 1, 0,    2, 0, 1, 0,
      3, 0, 1, 0,       2, 0, 1, 0
 };
+
+
+/***********************************************************
+ * 功能描述：禁止中断(支持中断嵌套)
+ * 输入参数：无
+ * 输出参数： 无
+ * 返 回 值：  无
+ ***********************************************************/
+void irq_disable(void)
+{
+    hw_irq_disable();
+    ++gs_irq_cnt;
+}
+/***********************************************************
+ * 功能描述：允许中断(支持中断嵌套)
+ * 输入参数：无
+ * 输出参数： 无
+ * 返 回 值：  无
+ * 注意:中断嵌套不匹配导致中断永久性关闭!!!
+ ***********************************************************/
+void irq_enable(void)
+{
+    if (--gs_irq_cnt == 0)
+    {
+        hw_irq_enable();
+    }
+
+    if (gs_irq_cnt < 0)
+    {
+        gs_irq_cnt = 0;
+
+        DBG("BUG: irq lock!!!!!");
+        TNOS_ASSERT(0);
+    }
+}
 
 /***********************************************************
  * 功能描述：空闲任务初始化
@@ -62,13 +99,11 @@ static void idle_task(void *parg)
 {
 #if (TNOS_STK_CHECK != 0)
     time_tick_t tick_ps, tick_ps_new;
+
+    get_time_tick(&tick_ps);
 #endif
 
     tnos_sched();
-
-#if (TNOS_STK_CHECK != 0)
-    get_time_tick(&tick_ps);
-#endif
 
 	while (1)
 	{
@@ -87,9 +122,8 @@ static void idle_task(void *parg)
         if (pass >= TNOS_PS_PERIOD*1000) //先不加上,防止频繁加锁影响效率
         {
             u32 all = 0;
-            u32 reg;
 
-            reg = irq_disable();
+            irq_disable();
             get_time_tick2(&tick_ps_new);
             pass = pass_ticks(&tick_ps, &tick_ps_new);
 
@@ -115,12 +149,14 @@ static void idle_task(void *parg)
 
                 all = pass;
             }
-            irq_enable(reg);
+            irq_enable();
 
             if (all != 0)
             {
                 u32 use_less;
                 tnos_tcb_t *ptcb;
+
+                tnos_sched_lock();
 
                 DBG("\r\n");
 
@@ -159,6 +195,7 @@ static void idle_task(void *parg)
                         break;
                     }
                 }
+                tnos_sched_unlock();
             }
         }
 #endif
@@ -215,6 +252,13 @@ static void tnos_run(void)
     tnos_tim_ms_set(100);
     gs_tnos_shed_lock_cnt = 0;
     tnos_start_rdy();
+
+    tnos_task_sw();
+    irq_enable();
+
+    while (1)
+    {
+    }
 }
 
 /***********************************************************
@@ -226,9 +270,9 @@ static void tnos_run(void)
 static void tnos_printf(void)
 {
     xprintf("\n\n");
-    xprintf("RTOS  is  Operating System\n");
-    xprintf("  %d.%d.%d\n", TNOS_VER_MAJOR, TNOS_VER_SUB, TNOS_VER_REVISE);
-    xprintf(" 2017 - 2018 Copyright by rtos team\n");
+    xprintf("RTOS  is  Operating System");
+    xprintf("  SVN:%d.%d.%d", TNOS_VER_MAJOR, TNOS_VER_SUB, TNOS_VER_REVISE);
+    xprintf("  2017 - 2018 Copyright by rtos team");
 }
 
 
@@ -286,15 +330,15 @@ static void printf_list(const char *pname)
         }
     }
 
-#if 0
-    for (u32 i = 0; i < TNOS_PRO_MAX; i++)
+#if 1
+    for (i = 0; i < TNOS_PRO_MAX; i++)
     {
-        list_t *plist_head = gs_prdy[i];
+        list_t *plist_head = &gs_prdy[i];
 
         for (plist = plist_head->prev; plist != plist_head; plist = plist->prev)
         {
             ptcb = LIST_ENTRY(plist, tnos_tcb_t, list_run);
-            TNOS_DBG(" name end[%u][%s]", i, ptcb->pname);
+            TNOS_DBG(" name end[%u][%s]", i, ptcb->name);
         }
     }
 #endif
@@ -341,6 +385,8 @@ static void tnos_insert_delay(tnos_tcb_t *ptcb, u32 *pnext_time)
 {
     list_t *plist;
 
+    TNOS_ASSERT(ptcb != &gs_idle_tcb);
+
     //按时间由小到大排列
     for (plist = gs_list_head_delay.next; plist != &gs_list_head_delay; plist = plist->next)
     {
@@ -377,7 +423,9 @@ static void tnos_insert_delay(tnos_tcb_t *ptcb, u32 *pnext_time)
  ***********************************************************/
 static void tnos_set_ready_wait(tnos_tcb_t *ptcb)
 {
-    TNOS_DBG("READ wait[%u] [%s]", ptcb->pro, ptcb->pname);
+    TNOS_DBG("READ wait[%u] [%s]", ptcb->pro, ptcb->name);
+
+    TNOS_ASSERT(ptcb != &gs_idle_tcb);
 
     gs_rdy_wait_grop |= BIT(ptcb->pro);
     ptcb->ms_less = ptcb->mss;
@@ -387,7 +435,7 @@ static void tnos_set_ready_wait(tnos_tcb_t *ptcb)
 
 //存在处于 等待队列中,之后插入运行导致重新分配时间片
 /***********************************************************
- * 功能描述：设置任务准备运行(不能再延迟队列中)
+ * 功能描述：设置任务准备运行(不能再延迟队列中,空闲任务不允许调用)
  * 输入参数：ptcb     任务参数
  *          pro       优先级
  * 输出参数： 无
@@ -395,7 +443,9 @@ static void tnos_set_ready_wait(tnos_tcb_t *ptcb)
  ***********************************************************/
 static void tnos_set_ready(tnos_tcb_t *ptcb, BOOL is_after)
 {
-    TNOS_DBG("READ[%u] [%s]", ptcb->pro, ptcb->pname);
+    TNOS_DBG("READ[%u] [%s]", ptcb->pro, ptcb->name);
+
+    TNOS_ASSERT(ptcb != &gs_idle_tcb);
 
     if (ptcb->list_run.next == NULL) //在队列中不动(防止gs_rdy_grop 对优先级判断不对)
     {//防止在准备队列中被重新分配时间片
@@ -427,6 +477,7 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
 {
     register tnos_tcb_t *pcur;
     register tnos_tcb_t *pnext; //下一个运行的任务
+    BOOL is_old_shed;
 
 	if (gs_tnos_shed_lock_cnt > 0)
 	{
@@ -436,18 +487,44 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
 	pcur = gs_ptnos_tcb_cur;
 
 	TNOS_DBG("");
-    TNOS_DBG("cur name[%s],rb[%u]t[%u.%03u]", pcur->pname, gs_rdy_grop, ptick_now->s, ptick_now->ms);
+    TNOS_DBG("cur name[%s],rb[%u]t[%u.%03u]", pcur->name, gs_rdy_grop, ptick_now->s, ptick_now->ms);
 
 	//当前任务为非空闲任务才比较时间
     //高优先级和同优先级
 	//时间片分配: 当运行队列为 空时分配时间片
 	//           任务变就绪,且不再运行和运行等待队列中,增加时间片
-	if (pcur != &gs_idle_tcb)
-	{
-	    u8 ms_less = ttimer_time_less2(&pcur->tm, ptick_now);
 
-	    if (ms_less != 0)  //高优先级和同优先级可以打断低优先级
-	    {
+    is_old_shed = FALSE;
+
+    if (pcur != gs_ptnos_tcb_ready) //还没调度完成,重新转回到队列中
+    {
+		register tnos_tcb_t *pready;
+
+        is_old_shed = TRUE;
+        pready = gs_ptnos_tcb_ready;
+
+        if (pready != &gs_idle_tcb) //切换到空闲任务不需要管
+        {
+            TNOS_DBG("delay wait");
+
+            if (pready->list_run.next == NULL) //不在运行队列中
+            {
+                u32 mss;
+
+                TNOS_DBG("  delay wait ok");
+                list_remove(&pready->list_delay);
+                mss = pready->mss;
+                tnos_set_ready(pready, TRUE);
+                pready->mss = mss;
+            }
+        }
+    }
+    else  if (pcur != &gs_idle_tcb)
+    {
+        u8 ms_less = ttimer_time_less2(&pcur->tm, ptick_now);
+
+        if (ms_less != 0)  //高优先级和同优先级可以打断低优先级
+        {
             if (pcur->pro < gs_higth_rdy_tab[gs_rdy_grop]) //可能存在空链表被打断
             {
                 TNOS_DBG("low");
@@ -455,16 +532,16 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
             }
 
             TNOS_DBG("higher");
-	    }
+        }
 
-	    list_remove(&pcur->list_delay); //防止当前任务在延迟队列中
+        list_remove(&pcur->list_delay); //防止当前任务在延迟队列中
 
         if (delay_ms == 0)
         {
             if (ms_less != 0) //被高优先级中断
             {
                 TNOS_DBG("  cur ready");
-                tnos_set_ready(pcur, TRUE);
+                tnos_set_ready(pcur, FALSE);
                 pcur->ms_less = ms_less;
             }
             else //时间片用完, 防止放后面,没任务时不给当前任务分时间片
@@ -478,14 +555,14 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
             }
         }
         else  //不需要延迟(被打断),直接设置为准备
-	    {//(定时中断一定不会进入)
+        {//(定时中断一定不会进入)
             TNOS_DBG("delay[%u]", delay_ms);
-	        pcur->is_timeout_del = FALSE;
-	        ttimer_set2(&pcur->tm, delay_ms, ptick_now);
-	        tnos_insert_delay(pcur, pnext_time);
-	    }
-	}
-
+            pcur->is_timeout_del = FALSE;
+            ttimer_set2(&pcur->tm, delay_ms, ptick_now);
+            tnos_insert_delay(pcur, pnext_time);
+        }
+    }
+    
     TNOS_DBG_LIST("s in");
 
     while (1)
@@ -520,6 +597,15 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
                 plist->next = NULL;     //快速移除当前队列
     			list_init(plist_head);
     			gs_rdy_grop &= ~BIT(pos);
+
+    			{
+    			    static u8 cnt = 0;
+
+    			    if (++cnt == 8)
+    			    {
+    			        cnt++;
+    			    }
+    			}
     			TNOS_DBG("one 1");
     		}
     		else
@@ -534,12 +620,12 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
 
             ms_less = pnext->ms_less;
 
-            if (ms_less == 0) //无时间片等待分配 (不可能出现,出现则有BUG)
-            {
-                TNOS_DBG("run_next = 0");
-                tnos_set_ready_wait(pnext);
-                continue;
-            }
+//            if (ms_less == 0) //无时间片等待分配 (不可能出现,出现则有BUG)
+//            {
+//                TNOS_DBG("run_next = 0");
+//                tnos_set_ready_wait(pnext);
+//                continue;
+//            }
 
     		if (pcur != pnext) //不同任务直接调度
     		{
@@ -601,8 +687,11 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
 
     TNOS_DBG_LIST("shell out");
 
-	TNOS_DBG("s %s to %s", pcur->pname, gs_ptnos_tcb_ready->pname);
-	tnos_task_sw();
+	TNOS_DBG("s %s to %s", pcur->name, gs_ptnos_tcb_ready->name);
+	if (!is_old_shed)
+	{
+	    tnos_task_sw();
+	}
 }
 
 
@@ -614,14 +703,22 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
  ***********************************************************/
 void tnos_tick_proess(void)
 {
-    u32 reg;
     list_t *plist;
     time_tick_t tick_now;
     u32 next_time = 1000;
 
     TNOS_DBG("t");
 
-    reg = irq_disable();
+    {
+        static u8 cnt = 0;
+
+        if (++cnt == 30)
+        {
+            cnt++;
+        }
+    }
+
+    irq_disable();
     get_time_tick2(&tick_now);
 
     plist = gs_list_head_delay.next;
@@ -650,18 +747,18 @@ void tnos_tick_proess(void)
             //ttimer_set_timeout(&ptcb->tm);
             tnos_set_ready(ptcb, FALSE);
 
-            TNOS_DBG("r[%s]", ptcb->pname);
+            TNOS_DBG("r[%s]", ptcb->name);
             TNOS_DBG_LIST("time change out");
         }
         else
         {
-            TNOS_DBG("r remove[%s]", ptcb->pname);
+            TNOS_DBG("r remove[%s]", ptcb->name);
         }
     }
 
     tnos_do_sched(&tick_now, 0, &next_time);
     tnos_tim_ms_set(next_time);
-    irq_enable(reg);
+    irq_enable();
 
 
     TNOS_DBG("  n[%u]", next_time);
@@ -696,12 +793,10 @@ void tnos_task_set_name(tnos_tcb_t *ptcb, const char *pname)
 s32 tnos_task_create(tnos_tcb_t *ptcb, const char *pname, tnos_pro_t pro, u8 mss,
                      ptnos_task task, void *parg, u32 *stk_addr, u16 stk_size)
 {
-    u32 reg;
-
     TNOS_ASSERT(((ptcb != NULL) && (pname != NULL) && ((u32)pro < TNOS_PRO_MAX) && (mss > 0)
                  && (task != NULL) && (stk_addr != NULL) && (stk_size > 32)));
 
-    reg = irq_disable();
+    irq_disable();
     if (ptcb != &gs_idle_tcb)
     {
         tnos_tcb_t *ptcb_f = &gs_idle_tcb;
@@ -718,7 +813,7 @@ s32 tnos_task_create(tnos_tcb_t *ptcb, const char *pname, tnos_pro_t pro, u8 mss
             if (ptcb_f == ptcb) //同一个任务栈赋值为2个任务
             {
                 TNOS_ASSERT(ptcb_f == ptcb);
-                irq_enable(reg);
+                irq_enable();
 
                 return TNOS_ERR_ARG;
             }
@@ -749,7 +844,7 @@ s32 tnos_task_create(tnos_tcb_t *ptcb, const char *pname, tnos_pro_t pro, u8 mss
         gs_idle_tcb.ptcb_next = &gs_idle_tcb;
     }
 
-    irq_enable(reg);
+    irq_enable();
 
     return TNOS_ERR_NONE;
 }
@@ -775,13 +870,11 @@ const char* tnos_name(void)
  ***********************************************************/
 s32 tnos_set_pro(tnos_tcb_t *ptcb, tnos_pro_t pro)
 {
-    u32 reg;
-
     TNOS_ASSERT((ptcb != NULL) && ((u32)pro < TNOS_PRO_MAX));
 
-    reg = irq_disable();
+    irq_disable();
 	ptcb->pro = pro; //必须禁止中断!!!
-    irq_enable(reg);
+    irq_enable();
 
 	return TNOS_ERR_NONE;
 }
@@ -796,8 +889,6 @@ s32 tnos_set_pro(tnos_tcb_t *ptcb, tnos_pro_t pro)
  ***********************************************************/
 s32 tnos_set_mss(tnos_tcb_t *ptcb, u8 ms)
 {
-    u32 reg;
-
     TNOS_ASSERT(ptcb != NULL);
 
 	if (ms == 0)
@@ -805,9 +896,9 @@ s32 tnos_set_mss(tnos_tcb_t *ptcb, u8 ms)
 		ms = 1;
 	}
 
-    reg = irq_disable();
+    irq_disable();
 	ptcb->mss = ms; //必须禁止中断!!!
-    irq_enable(reg);
+    irq_enable();
 
 	return TNOS_ERR_NONE;
 }
@@ -845,11 +936,9 @@ static void tnos_sched_noral(u32 delay_ms, BOOL set_timeout)
  ***********************************************************/
 void tnos_sched(void)
 {
-    u32 reg;
-
-    reg = irq_disable();
+    irq_disable();
     tnos_sched_noral(0, TRUE);
-    irq_enable(reg);
+    irq_enable();
 
     tnos_irq_delay();
 }
@@ -873,9 +962,7 @@ void tnos_interrupt_enter(void)
  ***********************************************************/
 void tnos_interrupt_exit(void)
 {
-    u32 reg;
-
-    reg = irq_disable();
+    irq_disable();
     if (--gs_tnos_shed_lock_cnt <= 0)
     {
         time_tick_t tick_now;
@@ -891,7 +978,7 @@ void tnos_interrupt_exit(void)
             tnos_tim_ms_set(next_time);
         }
     }
-    irq_enable(reg);
+    irq_enable();
 }
 
 
@@ -903,11 +990,9 @@ void tnos_interrupt_exit(void)
  ***********************************************************/
 void tnos_sched_lock(void)
 {
-    u32 reg;
-
-    reg = irq_disable();
+    irq_disable();
     gs_tnos_shed_lock_cnt++;
-    irq_enable(reg);
+    irq_enable();
 }
 
 /***********************************************************
@@ -918,15 +1003,13 @@ void tnos_sched_lock(void)
  ***********************************************************/
 void tnos_sched_unlock(void)
 {
-    u32 reg;
-
-    reg = irq_disable();
+    irq_disable();
     if (--gs_tnos_shed_lock_cnt <= 0)
     {
         gs_tnos_shed_lock_cnt = 0;
         tnos_sched_noral(0, FALSE);
     }
-    irq_enable(reg);
+    irq_enable();
 }
 
 /***********************************************************
@@ -939,17 +1022,15 @@ void tnos_delay_ms(u32 delay_ms)
 {
     if (delay_ms != 0)
     {
-        u32 reg;
-
-        reg = irq_disable();
+        irq_disable();
         if (gs_ptnos_tcb_cur != &gs_idle_tcb)
         {
             tnos_sched_noral(delay_ms, TRUE);
-            irq_enable(reg);
+            irq_enable();
         }
         else
         {
-            irq_enable(reg);
+            irq_enable();
 
             ttimer_delay_ms(delay_ms);
         }
@@ -1014,7 +1095,7 @@ void tnos_singal_send(tnos_singal_t *psingal)
  * 输出参数： 无
  * 返 回 值：超时, 或者 当前发送信号的个数
  ***********************************************************/
-int tnos_singal_wait_ms(tnos_singal_t *psingal_in, u32 delay_ms, u32 *preg)
+int tnos_singal_wait_ms(tnos_singal_t *psingal_in, u32 delay_ms)
 {
     if ((delay_ms != 0) && (psingal_in->send_num == 0)) //没有延迟
     {
@@ -1025,11 +1106,11 @@ int tnos_singal_wait_ms(tnos_singal_t *psingal_in, u32 delay_ms, u32 *preg)
             singal_wait.ptab = gs_ptnos_tcb_cur;
             list_insert_before(&psingal_in->list_wait_head, &singal_wait.list);
             tnos_sched_noral(delay_ms, TRUE);
-            irq_enable(*preg);
+            irq_enable();
 
             tnos_irq_delay1();
 
-            *preg = irq_disable();
+            irq_disable();
             list_remove(&singal_wait.list);
         }
         else //空闲任务只能轮询
@@ -1037,24 +1118,24 @@ int tnos_singal_wait_ms(tnos_singal_t *psingal_in, u32 delay_ms, u32 *preg)
             ttimer_t tm;
 
             ttimer_set(&tm, delay_ms);
-            irq_enable(*preg);
+            irq_enable();
 
             while (1)
             {
                 if (ttimer_is_timeout(&tm))
                 {
-                    *preg = irq_disable();
+                    irq_disable();
                     break;
                 }
 
                 if (psingal_in->send_num != 0) //查看是否有信号发送
                 {
-                    *preg = irq_disable();
+                    irq_disable();
                     if (psingal_in->send_num != 0) //占用发送信号
                     {
                         break;
                     }
-                    irq_enable(*preg);
+                    irq_enable();
                 }
             }
         }
@@ -1102,7 +1183,6 @@ s32 tnos_select(tnos_select_t *psel, u32 arary_num, u32 delay_ms)
 {
     register tnos_select_t *p;
     s32 send_no;
-    u32 reg;
 
 #if (TNOS_DBG_ENABLE != 0)
     TNOS_ASSERT((psel != NULL) && ((u32)arary_num != 0));
@@ -1113,7 +1193,7 @@ s32 tnos_select(tnos_select_t *psel, u32 arary_num, u32 delay_ms)
     }
 #endif
 
-    reg = irq_disable();
+    irq_disable();
     send_no = tnos_is_send(psel, arary_num);
 
     if ((delay_ms != 0) && (send_no < 0)) //没有延迟
@@ -1129,11 +1209,11 @@ s32 tnos_select(tnos_select_t *psel, u32 arary_num, u32 delay_ms)
             }
 
             tnos_sched_noral(delay_ms, TRUE);
-            irq_enable(reg);
+            irq_enable();
 
             tnos_irq_delay1();
 
-            reg = irq_disable();
+            irq_disable();
             for (i = 0; i < arary_num; i++)
             {
                 list_remove(&psel[i].singal_wait.list);
@@ -1146,31 +1226,31 @@ s32 tnos_select(tnos_select_t *psel, u32 arary_num, u32 delay_ms)
             ttimer_t tm;
 
             ttimer_set(&tm, delay_ms);
-            irq_enable(reg);
+            irq_enable();
 
             while (1)
             {
                 if (ttimer_is_timeout(&tm))
                 {
-                    reg = irq_disable();
+                    irq_disable();
                     break;
                 }
 
                 if (send_no >= 0) //查看是否有信号发送
                 {
-                    reg = irq_disable();
+                    irq_disable();
                     send_no = tnos_is_send(psel, arary_num);
 
                     if (send_no >= 0) //占用发送信号
                     {
                         break;
                     }
-                    irq_enable(reg);
+                    irq_enable();
                 }
             }
         }
     }
-    irq_enable(reg);
+    irq_enable();
 
     return send_no;
 }

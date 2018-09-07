@@ -34,11 +34,11 @@
 
 //堆检和CPU使用率检查
 #define TNOS_STK_CHECK             1   //堆检查
-#define TNOS_PS_PERIOD             5   //统计一次周期,单位S
+#define TNOS_PS_PERIOD             1   //统计一次周期,单位S
 
 //空闲任务相关
 #define TNOS_TASK_IDLE_NAME        "idle" //空闲任务的名字
-#define TNOS_IDLE_STK_NUM          64     //空闲任务的堆大小(使用的是main函数堆栈!!)
+#define TNOS_IDLE_STK_NUM          128    //空闲任务的堆大小(使用的是main函数堆栈!!)
 #define TNOS_IDLE_HOOK             1      //空闲任务钩子
 
 //是否启用调试

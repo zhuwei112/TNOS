@@ -35,20 +35,19 @@ static void do_msgcyc_clean(tnos_msgcyc_t *pmsgc)
  ***********************************************************/
 s32 tnos_msgcyc_init(tnos_msgcyc_t *pmsgc, void *pbuf, u32 buf_size)
 {
-    u32 reg;
     u32 addr, less;
 
     TNOS_ASSERT((pmsgc != NULL) && (pbuf != NULL)
                 && (buf_size > (sizeof(tnos_msgcyc_data_t) + 4 + 4)));
 
-    reg = irq_disable();
+    irq_disable();
     memset(pmsgc, 0, sizeof(tnos_msgcyc_t));
     addr = ALIGN_UP((u32)pbuf, 4);
     less = addr - (u32)pbuf;
 
     if (less + 8 >= buf_size)
     {
-        irq_enable(reg);
+        irq_enable();
 
         return TNOS_ERR_ARG;
     }
@@ -63,7 +62,7 @@ s32 tnos_msgcyc_init(tnos_msgcyc_t *pmsgc, void *pbuf, u32 buf_size)
     pmsgc->buf_size = ALIGN_DOWN(buf_size, 4);
     tnos_singal_init(&pmsgc->singal, 0);
     do_msgcyc_clean(pmsgc);
-    irq_enable(reg);
+    irq_enable();
 
     return TNOS_ERR_NONE;
 }
@@ -76,11 +75,9 @@ s32 tnos_msgcyc_init(tnos_msgcyc_t *pmsgc, void *pbuf, u32 buf_size)
  ***********************************************************/
 void tnos_msgcyc_clean(tnos_msgcyc_t *pmsgc)
 {
-    u32 reg;
-
-    reg = irq_disable();
+    irq_disable();
     do_msgcyc_clean(pmsgc);
-    irq_enable(reg);
+    irq_enable();
 }
 
 /***********************************************************
@@ -91,12 +88,11 @@ void tnos_msgcyc_clean(tnos_msgcyc_t *pmsgc)
  ***********************************************************/
 u32 tnos_msgcyc_get_empty_num(tnos_msgcyc_t *pmsgc)
 {
-    u32 reg;
     s32 less;
     s32 space_bk, space_end;
 
     less = 0;
-    reg = irq_disable();
+    irq_disable();
     if (pmsgc->buf_size != 0)
     {
         if (pmsgc->pos_w >= pmsgc->pos_r)
@@ -116,7 +112,7 @@ u32 tnos_msgcyc_get_empty_num(tnos_msgcyc_t *pmsgc)
             less = MAX(space_bk, 0);
         }
     }
-    irq_enable(reg);
+    irq_enable();
 
     return (u32)less;
 }
@@ -131,7 +127,6 @@ u32 tnos_msgcyc_get_empty_num(tnos_msgcyc_t *pmsgc)
  ***********************************************************/
 s32 tnos_msgcyc_send(tnos_msgcyc_t *pmsgc, const void *pbuf, u32 len)
 {
-    u32 reg;
     u32 len_space;
     tnos_msgcyc_data_t *pd;
 
@@ -149,7 +144,7 @@ s32 tnos_msgcyc_send(tnos_msgcyc_t *pmsgc, const void *pbuf, u32 len)
 
     len_space = ALIGN_UP(len + sizeof(tnos_msgcyc_data_t), 4);
 
-    reg = irq_disable();
+    irq_disable();
     if (pmsgc->pos_w >= pmsgc->pos_r)
     {
         u32 less = pmsgc->buf_size - pmsgc->pos_w;
@@ -158,7 +153,7 @@ s32 tnos_msgcyc_send(tnos_msgcyc_t *pmsgc, const void *pbuf, u32 len)
         {
             if (pmsgc->pos_r < len_space + 4) //4防止读写相同
             {
-                irq_enable(reg);
+                irq_enable();
                 return TNOS_ERR_LESS;
             }
 
@@ -168,7 +163,7 @@ s32 tnos_msgcyc_send(tnos_msgcyc_t *pmsgc, const void *pbuf, u32 len)
         }
         else if ((less == len_space) && (pmsgc->pos_r == 0))
         {
-            irq_enable(reg);
+            irq_enable();
             return TNOS_ERR_LESS;
         }
     }
@@ -178,7 +173,7 @@ s32 tnos_msgcyc_send(tnos_msgcyc_t *pmsgc, const void *pbuf, u32 len)
 
         if (less < len_space + 4) //至少有个空位
         {
-            irq_enable(reg);
+            irq_enable();
             return TNOS_ERR_LESS;
         }
     }
@@ -195,7 +190,7 @@ s32 tnos_msgcyc_send(tnos_msgcyc_t *pmsgc, const void *pbuf, u32 len)
 
     pmsgc->pos_w = pd->pos_next;
     tnos_singal_send(&pmsgc->singal);
-    irq_enable(reg);
+    irq_enable();
 
     return 0;
 }
@@ -209,7 +204,7 @@ s32 tnos_msgcyc_send(tnos_msgcyc_t *pmsgc, const void *pbuf, u32 len)
  * 返 回 值：  接收数据的长度, 负数或者0 失败
  * 注意: (返回> 0时,一定要释放 tnos_msgq_rev_ptr_next)
  ***********************************************************/
-s32 do_tnos_msgq_rev_ptr(tnos_msgcyc_t *pmsgc, u8 **pbuf, u32 timeout_ms, u32 *preg)
+s32 do_tnos_msgq_rev_ptr(tnos_msgcyc_t *pmsgc, u8 **pbuf, u32 timeout_ms)
 {
     s32 num;
 
@@ -222,7 +217,7 @@ s32 do_tnos_msgq_rev_ptr(tnos_msgcyc_t *pmsgc, u8 **pbuf, u32 timeout_ms, u32 *p
         return TNOS_ERR_OTHER;
     }
 
-    num = tnos_singal_wait_ms(&pmsgc->singal, timeout_ms, preg);
+    num = tnos_singal_wait_ms(&pmsgc->singal, timeout_ms);
 
     if (num <= 0)
     {
@@ -231,13 +226,15 @@ s32 do_tnos_msgq_rev_ptr(tnos_msgcyc_t *pmsgc, u8 **pbuf, u32 timeout_ms, u32 *p
 
     while (1)
     {
+        tnos_msgcyc_data_t *pd;
+
         if (pmsgc->pos_r == pmsgc->pos_w)
         {
             pmsgc->pos_r = pmsgc->pos_w = 0; //移到最开始,方便写分配空间
             break;
         }
 
-        tnos_msgcyc_data_t *pd = (tnos_msgcyc_data_t *)&(pmsgc->pbuf[pmsgc->pos_r]);
+        pd = (tnos_msgcyc_data_t *)&(pmsgc->pbuf[pmsgc->pos_r]);
 
         if (pd->len != 0)
         {
@@ -262,12 +259,11 @@ s32 do_tnos_msgq_rev_ptr(tnos_msgcyc_t *pmsgc, u8 **pbuf, u32 timeout_ms, u32 *p
  ***********************************************************/
 s32 tnos_msgcyc_rev_ptr(tnos_msgcyc_t *pmsgc, u8 **pbuf, u32 timeout_ms)
 {
-    u32 reg;
     s32 ret;
 
-    reg = irq_disable();
-    ret = do_tnos_msgq_rev_ptr(pmsgc, pbuf, timeout_ms, &reg);
-    irq_enable(reg);
+    irq_disable();
+    ret = do_tnos_msgq_rev_ptr(pmsgc, pbuf, timeout_ms);
+    irq_enable();
 
     return ret;
 }
@@ -285,13 +281,15 @@ void do_tnos_msgcyc_rev_ptr_next(tnos_msgcyc_t *pmsgc)
 
     while (1) //去掉写后面空的位置
     {
+        tnos_msgcyc_data_t *pd;
+
         if (pmsgc->pos_r == pmsgc->pos_w)
         {
             pmsgc->pos_r = pmsgc->pos_w = 0; //移到最开始,方便写分配空间
             break;
         }
 
-        tnos_msgcyc_data_t *pd = (tnos_msgcyc_data_t *)&(pmsgc->pbuf[pmsgc->pos_r]);
+        pd = (tnos_msgcyc_data_t *)&(pmsgc->pbuf[pmsgc->pos_r]);
 
         if ((!is_twince) && (pd->len != 0))
         {
@@ -312,11 +310,9 @@ void do_tnos_msgcyc_rev_ptr_next(tnos_msgcyc_t *pmsgc)
 ***********************************************************/
 void tnos_msgcyc_rev_ptr_next(tnos_msgcyc_t *pmsgc)
 {
-    u32 reg;
-
-    reg = irq_disable();
+    irq_disable();
     do_tnos_msgcyc_rev_ptr_next(pmsgc);
-    irq_enable(reg);
+    irq_enable();
 }
 
 
@@ -330,12 +326,11 @@ void tnos_msgcyc_rev_ptr_next(tnos_msgcyc_t *pmsgc)
  ***********************************************************/
 s32 tnos_msgcyc_rev(tnos_msgcyc_t *pmsgc, void *pbuf, u32 buf_len, u32 timeout_ms)
 {
-    u32 reg;
     s32 len;
     u8 *pbuf_r;
 
-    reg = irq_disable();
-    len = do_tnos_msgq_rev_ptr(pmsgc, &pbuf_r, timeout_ms, &reg);
+    irq_disable();
+    len = do_tnos_msgq_rev_ptr(pmsgc, &pbuf_r, timeout_ms);
 
     if (len > 0)
     {
@@ -347,7 +342,7 @@ s32 tnos_msgcyc_rev(tnos_msgcyc_t *pmsgc, void *pbuf, u32 buf_len, u32 timeout_m
         memcpy(pbuf, pbuf_r, len);
         do_tnos_msgcyc_rev_ptr_next(pmsgc);
     }
-    irq_enable(reg);
+    irq_enable();
 
     return len;
 }

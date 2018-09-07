@@ -249,10 +249,10 @@ void get_time_tick2(time_tick_t *ptick);
  ***********************************************************/
 INLINE__ void get_time_tick(time_tick_t *ptick)
 {
-    u32 reg = irq_disable();
+    irq_disable();
 
     get_time_tick2(ptick);
-    irq_enable(reg);
+    irq_enable();
 }
 
 

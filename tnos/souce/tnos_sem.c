@@ -21,13 +21,11 @@
  ***********************************************************/
 s32 tnos_sem_init(tnos_sem_t *psem, u32 cnt)
 {
-    u32 reg;
-
     TNOS_ASSERT(psem != NULL);
 
-    reg = irq_disable();
+    irq_disable();
     tnos_singal_init(&psem->singal, cnt);
-    irq_enable(reg);
+    irq_enable();
 
     return TNOS_ERR_NONE;
 }
@@ -42,13 +40,11 @@ s32 tnos_sem_init(tnos_sem_t *psem, u32 cnt)
  ***********************************************************/
 void tnos_sem_post(tnos_sem_t *psem)
 {
-    u32 reg;
-
     TNOS_ASSERT(psem != NULL);
 
-    reg = irq_disable();
+    irq_disable();
     tnos_singal_send(&psem->singal);
-    irq_enable(reg);
+    irq_enable();
 }
 
 
@@ -62,13 +58,12 @@ void tnos_sem_post(tnos_sem_t *psem)
 s32 tnos_sem_wait(tnos_sem_t *psem, u32 timeout_ms)
 {
     s32 cnt;
-    u32 reg;
 
     TNOS_ASSERT(psem != NULL);
 
-    reg = irq_disable();
-    cnt = tnos_singal_wait_ms(&psem->singal, timeout_ms, &reg);
-    irq_enable(reg);
+    irq_disable();
+    cnt = tnos_singal_wait_ms(&psem->singal, timeout_ms);
+    irq_enable();
 
     return cnt;
 }
@@ -82,11 +77,9 @@ s32 tnos_sem_wait(tnos_sem_t *psem, u32 timeout_ms)
  ***********************************************************/
 void tnos_sem_clean(tnos_sem_t *psem)
 {
-    u32 reg;
-
-    reg = irq_disable();
+    irq_disable();
     tnos_singal_clear_cnt(&psem->singal);
-    irq_enable(reg);
+    irq_enable();
 }
 
 

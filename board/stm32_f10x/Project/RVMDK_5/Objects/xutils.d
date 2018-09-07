@@ -1,0 +1,9 @@
+.\objects\xutils.o: ..\..\..\..\tnos\utility\xutils.c
+.\objects\xutils.o: ..\..\..\..\tnos\utility\xutils.h
+.\objects\xutils.o: ..\..\..\..\tnos\tnos_def.h
+.\objects\xutils.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\xutils.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\xutils.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\xutils.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h
+.\objects\xutils.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\xutils.o: ..\..\..\..\tnos\utility\xprintf.h

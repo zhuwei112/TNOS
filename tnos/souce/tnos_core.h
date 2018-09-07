@@ -75,7 +75,7 @@ void tnos_singal_send(tnos_singal_t *psingal);
  * 输出参数： 无
  * 返 回 值：超时, 或者 当前发送信号的个数
  ***********************************************************/
-int tnos_singal_wait_ms(tnos_singal_t *psingal_in, u32 delay_ms, u32 *preg);
+int tnos_singal_wait_ms(tnos_singal_t *psingal_in, u32 delay_ms);
 
 #define tnos_irq_delay tnos_irq_delay1
 /***********************************************************

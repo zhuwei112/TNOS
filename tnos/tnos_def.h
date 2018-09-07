@@ -64,7 +64,7 @@ typedef unsigned int             BOOL;
 #define  LIKELY(x)        __builtin_expect(!!(x), 1) //预测发生概率大的事情
 #define  UNLIKELY(x)      __builtin_expect(!!(x), 0) //预测小概率事情
 
-#ifdef __CC_ARM                         /* ARM Compiler */
+#if defined ( __CC_ARM )          /* ARM Compiler */
     #define AT_ALIGN2               __attribute__((aligned(2)))              //2字节对齐
     #define AT_ALIGN4               __attribute__((aligned(4)))              //4字节对齐
     #define AT_UNUSED               __attribute__ ((unused))                  //可以不用到
@@ -72,8 +72,9 @@ typedef unsigned int             BOOL;
     #define AT_SECTION(x)           __attribute__((section(x)))
     #define WEAK                    __weak
     #define INLINE__                static __inline
+    #define ASM__                   __asm
 
-#elif defined (__IAR_SYSTEMS_ICC__)
+#elif defined ( __ICCARM__ )      //IAR
 
     #define AT_ALIGN2               PRAGMA(data_alignment=2)             //2字节对齐
     #define AT_ALIGN4               PRAGMA(data_alignment=4)              //4字节对齐
@@ -83,8 +84,9 @@ typedef unsigned int             BOOL;
     #define AT_SECTION(x)           @ x
     #define WEAK                    __weak
     #define INLINE__                static inline
+    #define ASM__                   __asm
 
-#elif defined (__GNUC__)
+#elif defined ( __GNUC__ )  //GNU
 
     #define AT_ALIGN2               __attribute__((aligned(2)))              //2字节对齐
     #define AT_ALIGN4               __attribute__((aligned(4)))              //4字节对齐
@@ -94,6 +96,7 @@ typedef unsigned int             BOOL;
     #define AT_SECTION(x)           __attribute__((section(x)))
     #define WEAK                    __attribute__((weak))
     #define INLINE__                static __inline
+    #define ASM__                   __asm
 #endif
 
 /*数组大小*/
@@ -184,11 +187,22 @@ catch(std::bad_alloc& e)\
 
 
 
-//保存中断寄存器
-u32 irq_disable(void);
+/***********************************************************
+ * 功能描述：禁止中断(支持中断嵌套)
+ * 输入参数：无
+ * 输出参数： 无
+ * 返 回 值：  无
+ ***********************************************************/
+void irq_disable(void);
 
-//恢复中断寄存器
-void irq_enable(u32 reg);
+/***********************************************************
+ * 功能描述：允许中断(支持中断嵌套)
+ * 输入参数：无
+ * 输出参数： 无
+ * 返 回 值：  无
+ * 注意:中断嵌套不匹配导致中断永久性关闭!!!
+ ***********************************************************/
+void irq_enable(void);
 
 
 #endif

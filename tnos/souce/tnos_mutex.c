@@ -20,14 +20,12 @@
  ***********************************************************/
 s32 tnos_mutex_init(tnos_mutex_t *pmutex)
 {
-    u32 reg;
-
     TNOS_ASSERT(pmutex != NULL);
 
-    reg = irq_disable();
+    irq_disable();
     memset(pmutex, 0, sizeof(tnos_mutex_t));
     tnos_singal_init(&pmutex->singal, 0);
-    irq_enable(reg);
+    irq_enable();
 
     return TNOS_ERR_NONE;
 }
@@ -41,30 +39,29 @@ s32 tnos_mutex_init(tnos_mutex_t *pmutex)
  ***********************************************************/
 s32 tnos_mutex_trylock(tnos_mutex_t *pmutex, u32 timeout_ms)
 {
-    u32 reg;
     u32 i;
 
     TNOS_ASSERT(pmutex != NULL);
 
     for (i = 0; i < 2; i++)
     {
-        reg = irq_disable();
+        irq_disable();
         tnos_singal_clear_cnt(&pmutex->singal);
 
         if ((pmutex->lock_cnt == 0) || (pmutex->ptcb_send == gs_ptnos_tcb_cur)) //没有锁或者当前当前任务锁定
         {
             ++pmutex->lock_cnt;
             pmutex->ptcb_send = gs_ptnos_tcb_cur;
-            irq_enable(reg);
+            irq_enable();
 
             return TNOS_ERR_NONE;
         }
 
         if (i == 0)
         {
-            tnos_singal_wait_ms(&pmutex->singal, timeout_ms, &reg);
+            tnos_singal_wait_ms(&pmutex->singal, timeout_ms);
         }
-        irq_enable(reg);
+        irq_enable();
     }
 
     return TNOS_ERR_TIMEOUT;
@@ -94,18 +91,16 @@ void tnos_mutex_lock(tnos_mutex_t *pmutex)
  ***********************************************************/
 void tnos_mutex_unlock(tnos_mutex_t *pmutex)
 {
-    u32 reg;
-
     TNOS_ASSERT(pmutex != NULL);
 
-    reg = irq_disable();
+    irq_disable();
     if (pmutex->lock_cnt > 0) //解锁一次退出
     {
         --pmutex->lock_cnt;
     }
 
     tnos_singal_send(&pmutex->singal);
-    irq_enable(reg);
+    irq_enable();
 }
 
 #endif
