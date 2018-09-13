@@ -51,12 +51,11 @@ void te1(void)
 {
     u32 i = 0;
 
-    u32 reg;
-    reg = irq_disable();
+     irq_disable();
     for (i = 0; i < 100; i++); {};
 
     for (i = 0; i < 100; i++); {};
-    irq_enable(reg) ;
+    irq_enable() ;
 }
 
 /***********************************************************
@@ -72,16 +71,14 @@ static void task_main(void *p_arg)
     {
         u32 i = 0;
 
-        u32 reg;
-        reg = irq_disable();
-
+       irq_disable();
         OS_TASK_SW();
         for (i = 0; i < 100; i++); {};
 
         te1();
 
         for (i = 0; i < 100; i++); {};
-        irq_enable(reg) ;
+        irq_enable() ;
 
     }
 
@@ -204,14 +201,53 @@ void tnos_idle_hook(void)
 //
 //
 
+static volatile s32 gs_cnt = 0;
+
+
+
+void irq_ds(void)
+{
+
+    __disable_irq();
+    ++gs_cnt;
+}
+
+
+void irq_en(void)
+{
+    if (--gs_cnt == 0)
+    {
+        __enable_irq();
+    }
+}
 
 
 #if 0
+
 void test(void)
 {
+    DBG("test");
+    tnos_delay_ms(1000);
+    irq_ds();
+    DBG("1");
+    tnos_delay_ms(1000);
+    irq_ds();
+    DBG("2");
+    tnos_delay_ms(1000);
+    irq_ds();
 
+    DBG("3");
+    tnos_delay_ms(1000);
+    irq_en();
 
-
+    DBG("2");
+    tnos_delay_ms(1000);
+    irq_en();
+    DBG("1");
+    tnos_delay_ms(1000);
+    irq_en();
+    DBG("0");
+    tnos_delay_ms(1000);
 }
 #endif
 
@@ -226,6 +262,12 @@ int main(void)
 {
 
     tnos_startup();
+
+//    test();
+//
+//    while (1)
+//    {
+//    }
 
     return 0;
 }

@@ -34,6 +34,8 @@ u16 xstrlen(const char *s)
  ***********************************************************/
 s16 xstrncpy(char *dest, const char *src, u16 size)
 {
+	u16 len;
+	
     /***C++test说明***********************
      * src 必须是一个字符串
      * 保证 从src 的拷贝,不超过 dest 的大小size,
@@ -45,7 +47,7 @@ s16 xstrncpy(char *dest, const char *src, u16 size)
         return -1;
     }
 
-    u16 len = xstrlen(src);
+    len = xstrlen(src);
 
     if (len != 0)
     {
@@ -60,6 +62,7 @@ s16 xstrncpy(char *dest, const char *src, u16 size)
     dest[len] = 0;
     return (s16)len;
 }
+
 
 
 /***********************************************************
@@ -105,7 +108,6 @@ pfmt   格式化字符串
  ***********************************************************/
 int xsnprintf(char *pbuf, int maxlen, const char *pfmt, ...)
 {
-#if 1
     int ret;
     va_list va;
 
@@ -114,9 +116,6 @@ int xsnprintf(char *pbuf, int maxlen, const char *pfmt, ...)
     va_end(va);
 
     return ret;
-#else
-    return 0;
-#endif
 }
 
 
@@ -244,33 +243,6 @@ char *rm_trim(char *s)
     return s;
 }
 
-//
-//int str2int(const char *str)
-//{
-//	int temp = 0;
-//	const char *ptr = str;  //ptr保存str字符串开头
-//
-//	if (*str == '-' || *str == '+')  //如果第一个字符是正负号，
-//	{                      //则移到下一个字符
-//		str++;
-//	}
-//
-//	while(*str != 0)
-//	{
-//		if ((*str < '0') || (*str > '9'))  //如果当前字符不是数字
-//		{                       //则退出循环
-//			break;
-//		}
-//		temp = temp * 10 + (*str - '0'); //如果当前字符是数字则计算数值
-//		str++;      //移到下一个字符
-//	}
-//	if (*ptr == '-')     //如果字符串是以“-”开头，则转换成其相反数
-//	{
-//		temp = -temp;
-//	}
-//
-//	return temp;
-//}
 
 /***********************************************************
  * 功能描述： 将数字转为字符串
@@ -282,28 +254,27 @@ char *rm_trim(char *s)
 char*itoa(int value, char *pstring, int size)
 {
 
-
-	if (size < 2)
+	if (size >= 2)
 	{
-		return NULL;
+		char *pend = &pstring[size];
+		char *p = pend;
+
+		*--p = 0;
+
+		do
+		{
+			*--p = gc_itos[value % 10];
+		}while (((value /= 10) != 0) && (p > pstring));
+
+		if (p > pstring)
+		{
+			memmove(pstring, p, pend - p);
+		}
+
+		return pstring;
 	}
-
-	char *pend = &pstring[size];
-	char *p = pend;
-
-	*--p = 0;
-
-	do
-	{
-		*--p = gc_itos[value % 10];
-	}while (((value /= 10) != 0) && (p > pstring));
-
-	if (p > pstring)
-	{
-		memmove(pstring, p, pend - p);
-	}
-
-	return pstring;
+	
+	return NULL;
 }
 
 
@@ -356,21 +327,21 @@ u32 swab16(u16 x)
   返回说明:    相应年份的月份日数
   其它说明:
 *************************************************/
-static u32 *months(u32 year)
-{
-    //平年每个月的日数
-    static u32 s_nonleapyear[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+//static u32 *months(u32 year)
+//{
+//    //平年每个月的日数
+//    static u32 s_nonleapyear[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
-    //闰年每个月的日数
-    static u32 s_leapyear[] = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+//    //闰年每个月的日数
+//    static u32 s_leapyear[] = { 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
 
-    if((year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0)))
-    {
-        return s_leapyear;
-    }
+//    if((year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0)))
+//    {
+//        return s_leapyear;
+//    }
 
-    return s_nonleapyear;
-}
+//    return s_nonleapyear;
+//}
 //#define xMINUTE   (60             ) //1分的秒数
 //#define xHOUR      (60*xMINUTE) //1小时的秒数
 //#define xDAY        (24*xHOUR   ) //1天的秒数

@@ -1,5 +1,5 @@
 /***********************************************************
- * 版权信息:
+ * 版权信息:开源 GPLV2协议
  * 文件名称: tnos_cpu_c.c
  * 文件作者: 朱巍
  * 完成日期:
@@ -12,14 +12,44 @@
 
 #define TNOS_STK_FULL  0xFECB1DC7   //堆填充的数据
 
-#ifndef  D_NVIC_INT_CTRL
-#define  D_NVIC_INT_CTRL      *((u32 *)0xE000ED04)
+
+#define NVIC_SYSPRI2     0xE000ED20
+#define NVIC_PENDSV_PRI  0x00FF0000
+
+#if defined ( __CC_ARM  )
+ASM__ void __set_PSP(u32 topOfProcStack)
+{
+  msr psp, r0
+  bx lr
+}
+
+#elif (defined (__ICCARM__))
+
+void __set_PSP(u32 topOfProcStack)
+{
+  ASM__("msr psp, r0");
+  ASM__("bx lr");
+}
+
+#elif (defined (__GNUC__))
+void __set_PSP(u32 topOfProcStack)
+{
+  ASM__ volatile ("MSR psp, %0\n\t"
+                  "BX  lr     \n\t" : : "r" (topOfProcStack) );
+}
 #endif
 
-#ifndef  D_NVIC_PENDSVSET
-#define  D_NVIC_PENDSVSET     0x10000000
-#endif
-
+/***********************************************************
+ * 功能描述：开始运行就绪任务
+ * 输入参数：无
+ * 输出参数： 无
+ * 返 回 值：  无
+ ***********************************************************/
+void tnos_start_rdy(void)
+{
+    *((u32 *)NVIC_SYSPRI2) |= NVIC_PENDSV_PRI;
+    __set_PSP(0);
+}
 
 /***********************************************************
  * 功能描述：初始化任务堆栈
@@ -81,18 +111,6 @@ u32 tnos_taks_stk_check(u32 *pstk_addr, u32 stk_size)
 
     return i;
 }
-
-/***********************************************************
- * 功能描述：任务切换
- * 输入参数：无
- * 输出参数： 无
- * 返 回 值：  无
- ***********************************************************/
-void tnos_task_sw(void)
-{
-    D_NVIC_INT_CTRL = D_NVIC_PENDSVSET; //挂起pendsvc
-}
-
 
 
 

@@ -38,7 +38,7 @@
 
 //空闲任务相关
 #define TNOS_TASK_IDLE_NAME        "idle" //空闲任务的名字
-#define TNOS_IDLE_STK_NUM          64     //空闲任务的堆大小(使用的是main函数堆栈!!)
+#define TNOS_IDLE_STK_NUM          128    //空闲任务的堆大小(使用的是main函数堆栈!!)
 #define TNOS_IDLE_HOOK             1      //空闲任务钩子
 
 //是否启用调试

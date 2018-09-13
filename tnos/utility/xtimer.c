@@ -234,10 +234,25 @@ u32 pass_ticks(const time_tick_t *ptick_old, time_tick_t *ptick_new)
   ***********************************************************/
 INLINE__ void time_add(time_tick_t *ptick, u32 ms)
 {
-	u32 ms_in = ptick->ms + ms;
+    u32 ms_in = (u32)ptick->ms + ms;
 
-	ptick->ms = ms_in%1000;
-	ptick->s += ms_in/1000;
+#if (CPU_DEV__ == 0)
+    if (ms_in <= 1000*10)
+    {
+        while (ms_in >= 1000)
+        {
+            ms_in -= 1000;
+            ptick->s += 1;
+        }
+
+        ptick->ms = ms_in;
+    }
+    else
+#endif
+    {
+        ptick->ms = ms_in%1000;
+        ptick->s += ms_in/1000;
+    }
 }
 
 /***********************************************************

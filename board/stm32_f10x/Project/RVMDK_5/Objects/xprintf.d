@@ -1,0 +1,11 @@
+.\objects\xprintf.o: ..\..\..\..\tnos\utility\xprintf.c
+.\objects\xprintf.o: ..\..\..\..\tnos\utility\xutils.h
+.\objects\xprintf.o: ..\..\..\..\tnos\tnos_def.h
+.\objects\xprintf.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
+.\objects\xprintf.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\xprintf.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\xprintf.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\math.h
+.\objects\xprintf.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\xprintf.o: ..\..\..\..\tnos\utility\xprintf.h
+.\objects\xprintf.o: ..\..\..\..\tnos\utility\xtimer.h
+.\objects\xprintf.o: ..\..\..\stm32_f10x\tnos_dev.h
