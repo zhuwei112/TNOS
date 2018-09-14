@@ -45,7 +45,7 @@ static list_t *gs_prdy, *gs_prdy_wait;     //就绪队列指针, 就绪等待队列指针
 static volatile s16  gs_tnos_shed_lock_cnt = 0; //调度锁的次数
 static volatile s16 gs_irq_cnt = 0; //中断嵌套的个数
 static u8 gs_rdy_grop, gs_rdy_wait_grop;  //就绪队列组, 就绪等待队列指针组
-
+static BOOL8 gs_is_signal_send; //是否有信号发送(中断判断是否切换任务)
 
 
 
@@ -111,6 +111,7 @@ static void tnos_val_init(void)
     gs_prdy = gs_list_rdy[0];
     gs_prdy_wait = gs_list_rdy[1];
     gs_rdy_grop = gs_rdy_wait_grop = 0;
+    gs_is_signal_send = FALSE;
 
     list_init(&gs_list_head_delay);
     gs_tnos_shed_lock_cnt = 0xFF; //调度器被锁的次数
@@ -506,13 +507,6 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
 
             ms_less = pnext->ms_less;
 
-//            if (ms_less == 0) //无时间片等待分配 (不可能出现,出现则有BUG)
-//            {
-//                TNOS_DBG("run_next = 0");
-//                tnos_set_ready_wait(pnext);
-//                continue;
-//            }
-
     		if (pcur != pnext) //不同任务直接调度
     		{
     			ttimer_set2(&pnext->tm, ms_less, ptick_now);
@@ -614,14 +608,12 @@ void tnos_tick_proess(void)
 
         plist_next = plist->next;
         list_remove(plist);    //插入准备队列的最后
-
         plist = plist_next;
 
         if (!ptcb->is_timeout_del)
         {
             TNOS_DBG_LIST("time change in");
 
-            //ttimer_set_timeout(&ptcb->tm);
             tnos_set_ready(ptcb, FALSE);
 
             TNOS_DBG("r[%s]", ptcb->name);
@@ -828,11 +820,16 @@ void tnos_sched(void)
  ***********************************************************/
 void tnos_interrupt_enter(void)
 {
-    tnos_sched_lock();
+    irq_disable();
+    if (gs_tnos_shed_lock_cnt++ == 0)
+    {
+        gs_is_signal_send = FALSE; //清空信号标志
+    }
+    irq_enable();
 }
 
 /***********************************************************
- * 功能描述： 进入退出中断函数 (调用tnos相关函数的中断需要写)
+ * 功能描述： 退出中断函数 (调用tnos相关函数的中断需要写)
  * 输入参数：无
  * 输出参数： 无
  * 返 回 值：  无
@@ -840,27 +837,25 @@ void tnos_interrupt_enter(void)
 void tnos_interrupt_exit(void)
 {
     irq_disable();
-    if (--gs_tnos_shed_lock_cnt <= 0)
+    if (--gs_tnos_shed_lock_cnt == 0)
     {
-        time_tick_t tick_now;
-        u32 next_time;
-
-        gs_tnos_shed_lock_cnt = 0;
-        next_time = 0;
-        get_time_tick2(&tick_now);
-        tnos_do_sched(&tick_now, 0, &next_time);
-
-        if (next_time != 0)
+        if (gs_is_signal_send) //发送过信号
         {
-            tnos_tim_ms_set(next_time);
+            tnos_sched_noral(0, FALSE);
         }
+    }
+
+    if (gs_tnos_shed_lock_cnt < 0)
+    {
+        DBGW("BUG: irq shed_unlock!!!!!");
+        TNOS_ASSERT(0);
     }
     irq_enable();
 }
 
 
 /***********************************************************
- * 功能描述：调度 禁止
+ * 功能描述：调度 禁止(任务调用)
  * 输入参数：无
  * 输出参数： 无
  * 返 回 值：  无
@@ -873,7 +868,7 @@ void tnos_sched_lock(void)
 }
 
 /***********************************************************
- * 功能描述：调度 解锁
+ * 功能描述：调度 解锁(任务调用)
  * 输入参数：无
  * 输出参数： 无
  * 返 回 值：  无
@@ -881,16 +876,22 @@ void tnos_sched_lock(void)
 void tnos_sched_unlock(void)
 {
     irq_disable();
-    if (--gs_tnos_shed_lock_cnt <= 0)
+    if (--gs_tnos_shed_lock_cnt == 0)
     {
-        gs_tnos_shed_lock_cnt = 0;
         tnos_sched_noral(0, FALSE);
     }
+
+    if (gs_tnos_shed_lock_cnt < 0)
+    {
+        DBGW("BUG: shed_unlock!!!!!");
+        TNOS_ASSERT(0);
+    }
+
     irq_enable();
 }
 
 /***********************************************************
- * 功能描述：等待ms时间
+ * 功能描述：等待ms时间(任务调用)
  * 输入参数：delay_ms  ms时间
  * 输出参数： 无
  * 返 回 值：  无
@@ -949,6 +950,7 @@ void tnos_singal_send(tnos_singal_t *psingal)
         tnos_singal_wait_t *pwait;
         tnos_tcb_t *ptcb;
 
+        gs_is_signal_send = TRUE;
         list_remove(plist);
 
         pwait = LIST_ENTRY(plist, tnos_singal_wait_t, list);

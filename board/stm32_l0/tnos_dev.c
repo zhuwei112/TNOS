@@ -88,15 +88,11 @@ void tnos_tim_ms_set(u32 ms)
     {
         TIM3->SR = 0;
 
-        if (ms < (TIMER_ARR_S*1000 - 500))
+        ms = ms<<TIMER_MS_BIT;
+
+        if (ms > ((u32)TIMER_ARR_S*1000 - 500)<<TIMER_MS_BIT)
         {
-#if (TIMER_MS_BIT != 0)
-            ms = ms<<TIMER_MS_BIT;
-#endif
-        }
-        else
-        {
-            ms = (TIMER_ARR_S*1000 - 500)<<TIMER_MS_BIT;
+            ms = ((u32)TIMER_ARR_S*1000 - 500)<<TIMER_MS_BIT;
         }
 
         ms += TIM3->CNT;
