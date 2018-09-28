@@ -43,14 +43,9 @@ git add tnos/lib_cpu/arm/cortex-m3/*.c
 git add tnos/lib_cpu/arm/cortex-m3/*.h
 git add tnos/lib_cpu/arm/cortex-m3/*.S
 
-
 git add tnos/kernel
 git add tnos/kernel/*.c
 git add tnos/kernel/*.h
-
-git rm tnos/souce/*
-git rm tnos/souce
-
 
 git add tnos/utility
 git add tnos/utility/*.c

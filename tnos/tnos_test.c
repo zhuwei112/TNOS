@@ -182,7 +182,7 @@ static void task_m(void *p_arg)
     }
 }
 
-void tnos_app_init(void)
+void tnos_task_init(void)
 {
     tnos_task_create(&tcb_main,  "TK1", TNOS_PRO_MID, TNOS_SLICE_MS, task_main, (void *)0, stk_main, ARRAY_SIZE(stk_main));
     tnos_task_create(&tcb_m,  "TK2", TNOS_PRO_MID, TNOS_SLICE_MS, task_m, (void *)1, stk_m, ARRAY_SIZE(stk_m));
@@ -390,7 +390,7 @@ static void task_m2(void *p_arg)
  * 输出参数： 无
  * 返 回 值：  无
  ***********************************************************/
-void tnos_app_init(void)
+void tnos_task_init(void)
 {
     tnos_task_create(&tcb_main, "TK1", TNOS_PRO_MID, TNOS_SLICE_MS, task_main, (void *)0, stk_main, ARRAY_SIZE(stk_main));
     tnos_task_create(&tcb_m,  "TK2", TNOS_PRO_MID, TNOS_SLICE_MS, task_m, (void *)1, stk_m, ARRAY_SIZE(stk_m));
@@ -464,7 +464,7 @@ static void task_m2(void *p_arg)
     }
 }
 
-void tnos_app_init(void)
+void tnos_task_init(void)
 {
     tnos_task_create(&tcb_main, "TK1", TNOS_PRO_MID, TNOS_SLICE_MS, task_main, (void *)0, stk_main, ARRAY_SIZE(stk_main));
     tnos_task_create(&tcb_m, "TK2", TNOS_PRO_MID, TNOS_SLICE_MS, task_m, (void *)1, stk_m, ARRAY_SIZE(stk_m));
@@ -537,7 +537,7 @@ static void task_main1(void *p_arg)
  * 输出参数： 无
  * 返 回 值：  无
  ***********************************************************/
-void tnos_app_init(void)
+void tnos_task_init(void)
 {
     tnos_task_create(&tcb_main, "TK1", TNOS_PRO_MID, TNOS_SLICE_MS, task_main, (void *)0, stk_main, ARRAY_SIZE(stk_main));
     tnos_task_create(&tcb_m, "TK2", TNOS_PRO_MID, TNOS_SLICE_MS, task_main, (void *)1, stk_m, ARRAY_SIZE(stk_m));
@@ -633,7 +633,7 @@ static void task2(void *p_arg)
  * 输出参数： 无
  * 返 回 值：  无
  ***********************************************************/
-void tnos_app_init(void)
+void tnos_task_init(void)
 {
     tnos_mutex_init(&mutex);
     tnos_task_create(&tcb[0], "TK1", TNOS_PRO_MID, TNOS_SLICE_MS, task1, (void *)0, stk[0], ARRAY_SIZE(stk[0]));
@@ -730,7 +730,7 @@ static void task2(void *p_arg)
  * 输出参数：无
  * 返 回 值：  无
  ***********************************************************/
-void tnos_app_init(void)
+void tnos_task_init(void)
 {
     tnos_sem_init(&sem[0], 0);
     tnos_sem_init(&sem[1], 0);
@@ -811,7 +811,7 @@ static void task1(void *p_arg)
  * 输出参数：无
  * 返 回 值：  无
  ***********************************************************/
-void tnos_app_init(void)
+void tnos_task_init(void)
 {
     u32 i;
 
@@ -1060,7 +1060,7 @@ static void task_m(void *p_arg)
 }
 
 
-void tnos_app_init(void)
+void tnos_task_init(void)
 {
     tnos_msgq_init(&msg_q, 16, gs_buf, sizeof(gs_buf));
     tnos_task_create(&tcb_main, "TK1", TNOS_PRO_MID, TNOS_SLICE_MS, task_main, (void *)0, stk_main, ARRAY_SIZE(stk_main));
@@ -1068,3 +1068,8 @@ void tnos_app_init(void)
 //    tnos_task_create(&tcb_m2, "TK3", TNOS_PRO_MID, TNOS_SLICE_MS, task_m2, (void *)2, stk_m2, ARRAY_SIZE(stk_m2));
 }
 #endif
+
+
+void tnos_app_init(void)
+{
+}

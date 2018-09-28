@@ -87,6 +87,8 @@ void irq_enable(void)
         gs_irq_cnt = 0;
 
         DBG("BUG: irq lock!!!!!");
+		
+		
         TNOS_ASSERT(0);
     }
 }
@@ -185,6 +187,8 @@ void tnos_startup(void)
     ttimer_init(); //定时器初始化
 
     tnos_tim_ms_init(); //系统ms延迟初始化
+
+    tnos_task_init();
 
     tnos_board_other_init(); //板子硬件初始化
 
@@ -947,18 +951,14 @@ void tnos_singal_send(tnos_singal_t *psingal)
 
     if (plist != &psingal->list_wait_head) //没有任务等待
     {
-        tnos_singal_wait_t *pwait;
-        tnos_tcb_t *ptcb;
+        tnos_tcb_t *ptcb = LIST_ENTRY(plist, tnos_singal_wait_t, list)->ptab;
 
-        gs_is_signal_send = TRUE;
-        list_remove(plist);
-
-        pwait = LIST_ENTRY(plist, tnos_singal_wait_t, list);
-        ptcb = pwait->ptab;
-
-        //当前任务和空闲任务进行任务切换
         if ((ptcb != gs_ptnos_tcb_cur) && (ptcb != &gs_idle_tcb))
         {
+            gs_is_signal_send = TRUE;
+            list_remove(plist);
+
+            //当前任务和空闲任务进行任务切换
             list_remove(&ptcb->list_delay); //防止任务在定时队列中
             tnos_set_ready(ptcb, FALSE);
             tnos_sched_noral(0, FALSE);

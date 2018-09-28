@@ -17,7 +17,7 @@
 #define TNOS_ASSERT(exct)                                          \
     if (!(exct))                                                   \
     {                                                              \
-        tnos_assert(#exct, __FUNCTION__, __LINE__);                 \
+        tnos_assert(#exct, __FUNCTION__, __LINE__);  \
     }
 
 

@@ -3,7 +3,7 @@
 <title>Static Call Graph - [.\Objects\ISO-STM32.axf]</title></head>
 <body><HR>
 <H1>Static Call Graph for image .\Objects\ISO-STM32.axf</H1><HR>
-<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5050169: Last Updated: Thu Sep 13 14:28:51 2018
+<BR><P>#&#060CALLGRAPH&#062# ARM Linker, 5050169: Last Updated: Mon Sep 17 11:06:21 2018
 <BR><P>
 <H3>Maximum Stack Usage =        368 bytes + Unknown(Functions without stacksize, Cycles, Untraceable Function Pointers)</H3><H3>
 Call chain for Maximum Stack Depth:</H3>
@@ -1197,7 +1197,8 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[30]"></a>idle_task</STRONG> (Thumb, 196 bytes, Stack size 40 bytes, tnos_idle.o(i.idle_task))
-<BR><BR>[Stack]<UL><LI>Max Depth = 144<LI>Call Chain = idle_task &rArr; tnos_sched_unlock &rArr; tnos_sched_noral &rArr; tnos_do_sched &rArr; tnos_insert_delay
+<BR><BR>[Stack]<UL><LI>Max Depth = 232 + Unknown Stack Size
+<LI>Call Chain = idle_task &rArr; tnos_sched_unlock &rArr; xprintf_w &rArr; xvprintf &rArr; xvsnprintf &rArr; __c89vsnprintf &rArr; _printf_char_common &rArr; __printf
 </UL>
 <BR>[Calls]<UL><LI><a href="#[b4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;xprintf
 <LI><a href="#[b5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_taks_stk_check
@@ -1305,6 +1306,7 @@ Global Symbols
 <LI><a href="#[bc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_sem_wait
 <LI><a href="#[bf]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_sem_post
 <LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_sem_init
+<LI><a href="#[b6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_sched_unlock
 <LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;irq_enable
 </UL>
 
@@ -1362,10 +1364,13 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[30]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;idle_task
 </UL>
 
-<P><STRONG><a name="[b6]"></a>tnos_sched_unlock</STRONG> (Thumb, 36 bytes, Stack size 8 bytes, tnos_core.o(i.tnos_sched_unlock))
-<BR><BR>[Stack]<UL><LI>Max Depth = 104<LI>Call Chain = tnos_sched_unlock &rArr; tnos_sched_noral &rArr; tnos_do_sched &rArr; tnos_insert_delay
+<P><STRONG><a name="[b6]"></a>tnos_sched_unlock</STRONG> (Thumb, 58 bytes, Stack size 8 bytes, tnos_core.o(i.tnos_sched_unlock))
+<BR><BR>[Stack]<UL><LI>Max Depth = 192 + Unknown Stack Size
+<LI>Call Chain = tnos_sched_unlock &rArr; xprintf_w &rArr; xvprintf &rArr; xvsnprintf &rArr; __c89vsnprintf &rArr; _printf_char_common &rArr; __printf
 </UL>
-<BR>[Calls]<UL><LI><a href="#[c9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_sched_noral
+<BR>[Calls]<UL><LI><a href="#[af]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;xprintf_w
+<LI><a href="#[b7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_assert
+<LI><a href="#[c9]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_sched_noral
 <LI><a href="#[ae]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;irq_enable
 <LI><a href="#[ac]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;irq_disable
 </UL>
@@ -1384,7 +1389,7 @@ Global Symbols
 </UL>
 
 <P><STRONG><a name="[bf]"></a>tnos_sem_post</STRONG> (Thumb, 32 bytes, Stack size 8 bytes, tnos_sem.o(i.tnos_sem_post))
-<BR><BR>[Stack]<UL><LI>Max Depth = 112<LI>Call Chain = tnos_sem_post &rArr; tnos_singal_send &rArr; tnos_sched_noral &rArr; tnos_do_sched &rArr; tnos_insert_delay
+<BR><BR>[Stack]<UL><LI>Max Depth = 120<LI>Call Chain = tnos_sem_post &rArr; tnos_singal_send &rArr; tnos_sched_noral &rArr; tnos_do_sched &rArr; tnos_insert_delay
 </UL>
 <BR>[Calls]<UL><LI><a href="#[d5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_singal_send
 <LI><a href="#[b7]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_assert
@@ -1410,8 +1415,8 @@ Global Symbols
 <BR><BR>[Called By]<UL><LI><a href="#[c4]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_sem_init
 </UL>
 
-<P><STRONG><a name="[d5]"></a>tnos_singal_send</STRONG> (Thumb, 68 bytes, Stack size 8 bytes, tnos_core.o(i.tnos_singal_send))
-<BR><BR>[Stack]<UL><LI>Max Depth = 104<LI>Call Chain = tnos_singal_send &rArr; tnos_sched_noral &rArr; tnos_do_sched &rArr; tnos_insert_delay
+<P><STRONG><a name="[d5]"></a>tnos_singal_send</STRONG> (Thumb, 72 bytes, Stack size 16 bytes, tnos_core.o(i.tnos_singal_send))
+<BR><BR>[Stack]<UL><LI>Max Depth = 112<LI>Call Chain = tnos_singal_send &rArr; tnos_sched_noral &rArr; tnos_do_sched &rArr; tnos_insert_delay
 </UL>
 <BR>[Calls]<UL><LI><a href="#[cc]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;list_remove
 <LI><a href="#[cd]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_set_ready
@@ -1469,7 +1474,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[30]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;idle_task
 </UL>
 
-<P><STRONG><a name="[c3]"></a>tnos_task_create</STRONG> (Thumb, 182 bytes, Stack size 40 bytes, tnos_core.o(i.tnos_task_create))
+<P><STRONG><a name="[c3]"></a>tnos_task_create</STRONG> (Thumb, 180 bytes, Stack size 40 bytes, tnos_core.o(i.tnos_task_create))
 <BR><BR>[Stack]<UL><LI>Max Depth = 88<LI>Call Chain = tnos_task_create &rArr; xstrncpy &rArr; __aeabi_memcpy
 </UL>
 <BR>[Calls]<UL><LI><a href="#[e1]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;xstrncpy
@@ -1497,7 +1502,7 @@ Global Symbols
 <BR>[Called By]<UL><LI><a href="#[c3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_task_create
 </UL>
 
-<P><STRONG><a name="[a5]"></a>tnos_tick_proess</STRONG> (Thumb, 118 bytes, Stack size 32 bytes, tnos_core.o(i.tnos_tick_proess))
+<P><STRONG><a name="[a5]"></a>tnos_tick_proess</STRONG> (Thumb, 98 bytes, Stack size 32 bytes, tnos_core.o(i.tnos_tick_proess))
 <BR><BR>[Stack]<UL><LI>Max Depth = 104<LI>Call Chain = tnos_tick_proess &rArr; tnos_do_sched &rArr; tnos_insert_delay
 </UL>
 <BR>[Calls]<UL><LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ttimer_time_less2
@@ -1649,7 +1654,8 @@ Global Symbols
 </UL>
 <BR>[Calls]<UL><LI><a href="#[e5]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;xvprintf
 </UL>
-<BR>[Called By]<UL><LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;hardfault_handler_proc
+<BR>[Called By]<UL><LI><a href="#[b6]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_sched_unlock
+<LI><a href="#[9a]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;hardfault_handler_proc
 </UL>
 
 <P><STRONG><a name="[c2]"></a>xsnprintf</STRONG> (Thumb, 20 bytes, Stack size 24 bytes, xutils.o(i.xsnprintf))
@@ -1742,7 +1748,7 @@ Local Symbols
 </UL>
 <BR>[Address Reference Count : 1]<UL><LI> tnos_test.o(i.tnos_app_init)
 </UL>
-<P><STRONG><a name="[cb]"></a>tnos_do_sched</STRONG> (Thumb, 482 bytes, Stack size 48 bytes, tnos_core.o(i.tnos_do_sched))
+<P><STRONG><a name="[cb]"></a>tnos_do_sched</STRONG> (Thumb, 464 bytes, Stack size 48 bytes, tnos_core.o(i.tnos_do_sched))
 <BR><BR>[Stack]<UL><LI>Max Depth = 72<LI>Call Chain = tnos_do_sched &rArr; tnos_insert_delay
 </UL>
 <BR>[Calls]<UL><LI><a href="#[ce]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;ttimer_time_less2
@@ -1791,7 +1797,7 @@ Local Symbols
 <LI><a href="#[c3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_task_create
 </UL>
 
-<P><STRONG><a name="[da]"></a>tnos_val_init</STRONG> (Thumb, 92 bytes, Stack size 32 bytes, tnos_core.o(i.tnos_val_init))
+<P><STRONG><a name="[da]"></a>tnos_val_init</STRONG> (Thumb, 94 bytes, Stack size 32 bytes, tnos_core.o(i.tnos_val_init))
 <BR><BR>[Stack]<UL><LI>Max Depth = 120<LI>Call Chain = tnos_val_init &rArr; tnos_task_create &rArr; xstrncpy &rArr; __aeabi_memcpy
 </UL>
 <BR>[Calls]<UL><LI><a href="#[c3]">&gt;&gt;</a>&nbsp;&nbsp;&nbsp;tnos_task_create
