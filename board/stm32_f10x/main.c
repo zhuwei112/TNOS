@@ -32,11 +32,6 @@ void main_test(void)
 	}
 }
 
-#if 1
-
-
-#endif
-
 #if 0
 
 #include "tnos_cpu_c.h"
