@@ -28,7 +28,7 @@
 static void do_msgq_clean(tnos_msgq_t *pmsgq)
 {
     pmsgq->pos_empty = pmsgq->pos_head = pmsgq->pos_tail = 0;
-    tnos_singal_clear_cnt(&pmsgq->singal);
+    tnos_singal_clean(&pmsgq->singal);
 
     if (pmsgq->size != 0)
     {

@@ -932,6 +932,18 @@ void tnos_singal_init(tnos_singal_t *psingal, u32 cnt)
 }
 
 /***********************************************************
+ * 功能描述：清空信号,发送不会唤醒
+ * 输入参数：psingal 信号结构体
+ * 输出参数： 无
+ * 返 回 值：  无
+ ***********************************************************/
+void tnos_singal_clean(tnos_singal_t *psingal)
+{
+    list_init(&psingal->list_wait_head);
+    psingal->send_num = 0;
+}
+
+/***********************************************************
  * 功能描述：发送信号 (需禁止中断才能进入)
  * 输入参数：psingal 信号结构体
  *          tick_delay 当前任务需要延迟的tick数

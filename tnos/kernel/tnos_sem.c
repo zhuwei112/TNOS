@@ -78,7 +78,7 @@ s32 tnos_sem_wait(tnos_sem_t *psem, u32 timeout_ms)
 void tnos_sem_clean(tnos_sem_t *psem)
 {
     irq_disable();
-    tnos_singal_clear_cnt(&psem->singal);
+    tnos_singal_clean(&psem->singal);
     irq_enable();
 }
 
