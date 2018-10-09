@@ -21,7 +21,7 @@
 static void do_msgcyc_clean(tnos_msgcyc_t *pmsgc)
 {
     pmsgc->pos_w = pmsgc->pos_r = 0;
-    tnos_singal_clean(&pmsgc->singal);
+    tnos_singal_cnt_clean(&pmsgc->singal);
 }
 
 /***********************************************************

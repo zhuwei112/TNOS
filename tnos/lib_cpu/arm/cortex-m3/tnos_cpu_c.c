@@ -12,8 +12,6 @@
 
 #define TNOS_STK_FULL  0xFECB1DC7   //¶ÑÌî³äµÄÊý¾Ý
 
-extern void __set_PSP(u32 topOfProcStack);
-
 #define NVIC_SYSPRI2     0xE000ED20
 #define NVIC_PENDSV_PRI  0x00FF0000
 
@@ -26,7 +24,6 @@ extern void __set_PSP(u32 topOfProcStack);
 void tnos_start_rdy(void)
 {
     *((u32 *)NVIC_SYSPRI2) |= NVIC_PENDSV_PRI;
-    __set_PSP(0);
 }
 
 /***********************************************************

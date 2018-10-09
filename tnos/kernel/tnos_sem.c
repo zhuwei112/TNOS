@@ -72,13 +72,13 @@ s32 tnos_sem_wait(tnos_sem_t *psem, u32 timeout_ms)
 /***********************************************************
  * 功能描述：信号量等待(中断中不允许调用!!)
  * 输入参数：psingal 信号结构体
- * 输出参数： 情况等待次数
+ * 输出参数： 无
  * 返 回 值：  无
  ***********************************************************/
 void tnos_sem_clean(tnos_sem_t *psem)
 {
     irq_disable();
-    tnos_singal_clean(&psem->singal);
+    tnos_singal_cnt_clean(&psem->singal);
     irq_enable();
 }
 

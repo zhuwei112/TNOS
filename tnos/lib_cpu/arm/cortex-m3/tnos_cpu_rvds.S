@@ -30,37 +30,37 @@
 ;                                   void PendSV_Handler(void)
 ;********************************************************************************************************
 PendSV_Handler PROC
-    ;MOVS    r0, #64
-    ;PUSH    {LR}
-    ;BL.W     xprintf_put_char
-    ;POP     {LR}
-
+    CPSID   I
+    LDR     R0, =gs_ptnos_tcb_ready
+    LDR     R3, [R0]
     LDR     R2, =gs_ptnos_tcb_cur
-    MRS     R0, PSP
-    CBZ     R0, OS_CPU_PendSVHandler_nosave                     ;Skip register save the first time
+    LDR     R1, [R2]
 
-    SUBS    R0, R0, #0x20                                       ;Save remaining regs r4-11 on process stack
+    CMP     R1, R3                ;gs_ptnos_tcb_cur == gs_ptnos_tcb_ready ? exit
+    BEQ     svc_exit
+    CBZ     R1, svc_nosave        ;Skip register save the first time
+
+    MRS     R0, PSP
+    SUBS    R0, R0, #0x20         ;Save remaining regs r4-11 on process stack
     STM     R0, {R4-R11}
 
-    LDR     R1, [R2]
-    STR     R0, [R1]                                            ;gs_ptnos_tcb_cur->pstk = SP;
+    STR     R0, [R1]              ;gs_ptnos_tcb_cur->pstk = SP;
 
-OS_CPU_PendSVHandler_nosave
-    LDR     R1, =gs_ptnos_tcb_ready                             ;gs_ptnos_tcb_cur = gs_ptnos_tcb_ready;
-    LDR     R0, [R1]
-    STR     R0, [R2]
-    LDR     R0, [R0]
+svc_nosave
+    STR     R3, [R2] 
+    LDR     R0, [R3]              ;gs_ptnos_tcb_cur = gs_ptnos_tcb_ready;
 
-    LDM     R0, {R4-R11}                                        ;Restore r4-11 from new process stack
+
+    LDM     R0, {R4-R11}          ;Restore r4-11 from new process stack
     ADDS    R0, R0, #0x20
-    MSR     PSP, R0                                             ;Load PSP with new process SP
+    MSR     PSP, R0               ;Load PSP with new process SP
 
-    ORR     LR, LR, #0x04                                       ;Ensure exception return uses process stack
+svc_exit
+    ORR     LR, LR, #0x04         ;Ensure exception return uses process stack
 
     CPSIE   I
-    BX      LR                                                  ;Exception return will restore remaining context
+    BX      LR                    ;Exception return will restore remaining context
     ENDP
-
 
 
 hardfault_handler_proc     PROC

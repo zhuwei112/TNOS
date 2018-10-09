@@ -28,7 +28,7 @@ void idle_task(void *parg)
     get_time_tick(&tick_ps);
 #endif
 
-    tnos_sched();
+    tnos_idle_change();
 
 	while (1)
 	{

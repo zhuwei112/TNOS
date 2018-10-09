@@ -46,7 +46,7 @@ s32 tnos_mutex_trylock(tnos_mutex_t *pmutex, u32 timeout_ms)
     for (i = 0; i < 2; i++)
     {
         irq_disable();
-        tnos_singal_clean(&pmutex->singal);
+        tnos_singal_cnt_clean(&pmutex->singal);
 
         if ((pmutex->lock_cnt == 0) || (pmutex->ptcb_send == gs_ptnos_tcb_cur)) //没有锁或者当前当前任务锁定
         {

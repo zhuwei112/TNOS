@@ -646,7 +646,7 @@ void tnos_task_init(void)
 
 
 //测试信号量 切换速度 2个任务
-#if 0
+#if 1
 
 static tnos_sem_t sem[2];
 static tnos_tcb_t tcb[4];
@@ -742,7 +742,7 @@ void tnos_task_init(void)
 
 
 //测试信号量 切换速度  多个
-#if 1
+#if 0
 
 static tnos_tcb_t tcb[26];
 static tnos_sem_t sem[ARRAY_SIZE(tcb)];

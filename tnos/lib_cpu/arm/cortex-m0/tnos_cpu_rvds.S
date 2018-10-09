@@ -3,7 +3,7 @@
 ; File      : 开源 GPLV2协议
 ; Version   : V1.0.1
 ; By        : wlison zhu
-; For       : ARMv7M Cortex-M3
+; For       : ARMv7M Cortex-M0
 ; Mode      : Thumb2
 ; Toolchain : Keil uVision
 ;********************************************************************************************************
@@ -12,7 +12,6 @@
     IMPORT  gs_ptnos_tcb_cur             ;cur run tcb
     IMPORT  gs_ptnos_tcb_ready           ;ready run tcb
 
-    ;EXPORT  tnos_start_rdy               ;strart run
     EXPORT  PendSV_Handler               ;pend svc
 
 
@@ -27,36 +26,23 @@
 
 
 ;********************************************************************************************************
-;                                      void tnos_start_rdy(void)
-; Note(s) : first task to start
-;           a. set priority for PendSV (lowest)
-;           b. PSP=0 (for frist PendSV)
-;           c. restore MSP
-;           d. triggers PendSV
-;           e. enable irq
-;********************************************************************************************************
-
-
-  ;IMPORT  xprintf_put_char
-
-;********************************************************************************************************
 ;                                   void PendSV_Handler(void)
 ;********************************************************************************************************
 PendSV_Handler PROC
-    MRS     R3, PRIMASK
     CPSID   I
-    MOVS    r0, #64
-    ;PUSH    {LR}
-    ;BL.W     xprintf_put_char
-    ;POP     {LR}
+    LDR     R0, =gs_ptnos_tcb_ready
+    LDR     R3, [R0]
     LDR     R2, =gs_ptnos_tcb_cur
-    MRS     R0, PSP
-    CMP     R0, #0x00
-    BEQ     OS_CPU_PendSVHandler_nosave                     ;Skip register save the first time
-
-    SUBS    R0, R0, #0x20                                       ;Save remaining regs r4-11 on process stack
     LDR     R1, [R2]
-    STR     R0, [R1]                                            ;gs_ptnos_tcb_cur->pstk = SP;
+
+    CMP     R1, R3                     ;gs_ptnos_tcb_cur == gs_ptnos_tcb_ready ? exit
+    BEQ     svc_exit
+    CMP     R1, #0x00
+    BEQ     svc_nosave                 ;Skip register save the first time
+
+    MRS     R0, PSP
+    SUBS    R0, R0, #0x20
+    STR     R0, [R1]                   ;gs_ptnos_tcb_cur->pstk = SP;
 
     STMIA   R0!, {R4 - R7}             ;将R4~R7入栈
     MOV     R4, R8
@@ -65,15 +51,13 @@ PendSV_Handler PROC
     MOV     R7, R11
     STMIA   R0!, {R4 - R7}             ;将R8~R11入栈
 
+svc_nosave
+    STR     R3, [R2]
+    LDR     R0, [R3]                  ;gs_ptnos_tcb_cur = gs_ptnos_tcb_ready;
 
-OS_CPU_PendSVHandler_nosave
-    LDR     R1, =gs_ptnos_tcb_ready                             ;gs_ptnos_tcb_cur = gs_ptnos_tcb_ready;
-    LDR     R0, [R1]
-    STR     R0, [R2]
-    LDR     R0, [R0]
 
     MOV     R1, R0
-    ADDS    R0, R0, #16                ;恢复 (R8-R11)
+    ADDS    R0, R0, #16               ;恢复 (R8-R11)
     LDMIA   R0!, {R4-R7}
     MOV     R8, R4
     MOV     R9, R5
@@ -82,17 +66,13 @@ OS_CPU_PendSVHandler_nosave
     LDMIA   R1!, {R4 - R7}            ;恢复 (R4-R7)
     MSR     PSP, R0                   ;将新的SP更新到PSP中
 
-    MOVS    R0, #0x04
-    RSBS    R0, R0, #0x00
+svc_exit
+    MOV      R0, LR
+    MOVS     R1, #0x04
+    ORRS     R0, R0, R1
 
-    ;LDM     R0, {R4-R11}                                        ;Restore r4-11 from new process stack
-    ;ADDS    R0, R0, #0x20
-    ;MSR     PSP, R0                                             ;Load PSP with new process SP
-    ;ORR     LR, LR, #0x04                                       ;Ensure exception return uses process stack
-
-    MSR     PRIMASK, R3
-    BX      R0
-    ;BX      LR                                                  ;Exception return will restore remaining context
+    CPSIE   I
+    BX      R0                    ;Exception return will restore remaining context
     ENDP
 
 

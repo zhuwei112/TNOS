@@ -65,6 +65,7 @@ typedef struct
     u32    send_num;               //发送的次数, 0没有
 }tnos_singal_t;
 
+
 typedef struct tnos_tcb_arg
 {
     u32   *pstk;                //堆的地址(位置偏移必须为0!!)
@@ -381,7 +382,7 @@ s32 tnos_sem_wait(tnos_sem_t *psem, u32 timeout_ms);
 /***********************************************************
  * 功能描述：信号量等待(中断中不允许调用!!)
  * 输入参数：psingal 信号结构体
- * 输出参数： 情况等待次数
+ * 输出参数： 无
  * 返 回 值：  无
  ***********************************************************/
 void tnos_sem_clean(tnos_sem_t *psem);

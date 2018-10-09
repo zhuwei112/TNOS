@@ -117,8 +117,8 @@ static void tnos_val_init(void)
 
     list_init(&gs_list_head_delay);
     gs_tnos_shed_lock_cnt = 0xFF; //调度器被锁的次数
-    gs_ptnos_tcb_ready = gs_ptnos_tcb_cur = &gs_idle_tcb; //当前运行的tcb
-
+    gs_ptnos_tcb_ready = &gs_idle_tcb; //当前运行的tcb
+    gs_ptnos_tcb_cur = NULL;
     tnos_task_create(&gs_idle_tcb, TNOS_TASK_IDLE_NAME, TNOS_PRO_LOW, 2, idle_task, NULL, gs_idle_stk, ARRAY_SIZE(gs_idle_stk));
 
 #if (TNOS_STK_NAME != 0)
@@ -142,7 +142,6 @@ static void tnos_run(void)
 {
     irq_disable();
     tnos_tim_ms_set(100);
-    gs_tnos_shed_lock_cnt = 0;
     tnos_start_rdy();
 
     tnos_task_sw();
@@ -377,12 +376,7 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
 {
     register tnos_tcb_t *pcur;
     register tnos_tcb_t *pnext; //下一个运行的任务
-    BOOL is_old_shed;
-
-	if (gs_tnos_shed_lock_cnt > 0)
-	{
-		return;
-	}
+//    BOOL is_old_shed;
 
 	pcur = gs_ptnos_tcb_cur;
 
@@ -394,13 +388,13 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
 	//时间片分配: 当运行队列为 空时分配时间片
 	//           任务变就绪,且不再运行和运行等待队列中,增加时间片
 
-    is_old_shed = FALSE;
+//    is_old_shed = FALSE;
 
     if (pcur != gs_ptnos_tcb_ready) //还没调度完成,重新转回到队列中
     {
 		register tnos_tcb_t *pready;
 
-        is_old_shed = TRUE;
+//        is_old_shed = TRUE;
         pready = gs_ptnos_tcb_ready;
 
         if (pready != &gs_idle_tcb) //切换到空闲任务不需要管
@@ -531,6 +525,7 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
             pnext->ms_less = ms_less;
     		ttimer_set2(&pnext->tm, ms_less, ptick_now);
     		tnos_insert_delay(pnext, pnext_time);
+    		gs_ptnos_tcb_ready = gs_ptnos_tcb_cur; //同一个任务不切换
     		return;
         }
 
@@ -572,7 +567,7 @@ static void tnos_do_sched(time_tick_t *ptick_now, u32 delay_ms, u32 *pnext_time)
     TNOS_DBG_LIST("shell out");
 
 	TNOS_DBG("s %s to %s", pcur->name, gs_ptnos_tcb_ready->name);
-	if (!is_old_shed)
+//	if (!is_old_shed)
 	{
 	    tnos_task_sw();
 	}
@@ -629,7 +624,11 @@ void tnos_tick_proess(void)
         }
     }
 
-    tnos_do_sched(&tick_now, 0, &next_time);
+    if (gs_tnos_shed_lock_cnt <= 0)
+    {
+        tnos_do_sched(&tick_now, 0, &next_time);
+    }
+
     tnos_tim_ms_set(next_time);
     irq_enable();
 
@@ -784,20 +783,24 @@ s32 tnos_set_mss(tnos_tcb_t *ptcb, u8 ms)
  ***********************************************************/
 static void tnos_sched_noral(u32 delay_ms, BOOL set_timeout)
 {
-    time_tick_t tick_now;
-    u32 next_time = 0;
-
     if (set_timeout)
     {
         ttimer_set_timeout(&gs_ptnos_tcb_cur->tm);
     }
 
-    get_time_tick2(&tick_now);
-    tnos_do_sched(&tick_now, delay_ms, &next_time);
-
-    if (next_time != 0)
+    if (gs_tnos_shed_lock_cnt <= 0)
     {
-        tnos_tim_ms_set(next_time);
+        time_tick_t tick_now;
+        u32 next_time;
+
+        get_time_tick2(&tick_now);
+        next_time = 0;
+        tnos_do_sched(&tick_now, delay_ms, &next_time);
+
+        if (next_time != 0)
+        {
+            tnos_tim_ms_set(next_time);
+        }
     }
 }
 
@@ -857,6 +860,19 @@ void tnos_interrupt_exit(void)
     irq_enable();
 }
 
+/***********************************************************
+ * 功能描述：空闲任务改变
+ * 输入参数：无
+ * 输出参数： 无
+ * 返 回 值：  无
+ ***********************************************************/
+void tnos_idle_change(void)
+{
+    irq_disable();
+    gs_tnos_shed_lock_cnt = 0;
+    tnos_sched_noral(0, TRUE);
+    irq_enable();
+}
 
 /***********************************************************
  * 功能描述：调度 禁止(任务调用)
@@ -939,9 +955,35 @@ void tnos_singal_init(tnos_singal_t *psingal, u32 cnt)
  ***********************************************************/
 void tnos_singal_clean(tnos_singal_t *psingal)
 {
-    list_init(&psingal->list_wait_head);
+    list_t *pnow, *pnext;
+
     psingal->send_num = 0;
+    pnow = psingal->list_wait_head.next;
+
+    while (pnow != &psingal->list_wait_head)
+    {
+        pnext = pnow->next;
+        list_remove(pnow);
+        pnow = pnext;
+    }
 }
+
+/***********************************************************
+ * 功能描述：信号次数减一
+ * 输入参数：psingal 信号结构体
+ * 输出参数： 无
+ * 返 回 值：  当前信号值
+ ***********************************************************/
+u32 tnos_singal_cnt_del(tnos_singal_t *psingal)
+{
+    if (psingal->send_num > 0)
+    {
+        --psingal->send_num;
+    }
+
+    return psingal->send_num;
+}
+
 
 /***********************************************************
  * 功能描述：发送信号 (需禁止中断才能进入)
@@ -965,15 +1007,17 @@ void tnos_singal_send(tnos_singal_t *psingal)
     {
         tnos_tcb_t *ptcb = LIST_ENTRY(plist, tnos_singal_wait_t, list)->ptab;
 
-        if ((ptcb != gs_ptnos_tcb_cur) && (ptcb != &gs_idle_tcb))
-        {
-            gs_is_signal_send = TRUE;
-            list_remove(plist);
+        list_remove(plist);
 
-            //当前任务和空闲任务进行任务切换
-            list_remove(&ptcb->list_delay); //防止任务在定时队列中
-            tnos_set_ready(ptcb, FALSE);
-            tnos_sched_noral(0, FALSE);
+        if (ptcb != &gs_idle_tcb)
+        { //非当前任务,未在就绪队列中
+            if (ptcb->list_run.next == NULL)
+            {
+                    gs_is_signal_send = TRUE;
+                    list_remove(&ptcb->list_delay); //防止任务在定时队列中
+                    tnos_set_ready(ptcb, FALSE);
+                    tnos_sched_noral(0, FALSE);
+            }
         }
     }
 }
