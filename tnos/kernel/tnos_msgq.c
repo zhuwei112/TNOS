@@ -297,7 +297,6 @@ s32 tnos_msgq_rev_ptr(tnos_msgq_t *pmsgq, tnos_msgq_data_t **pmsgq_data, u32 tim
 {
     tnos_msgq_data_t *pdata;
     u16 pos;
-    s32 num;
     u32 len;
 
     TNOS_ASSERT((pmsgq != NULL) && (pmsgq_data != NULL))
@@ -310,22 +309,15 @@ s32 tnos_msgq_rev_ptr(tnos_msgq_t *pmsgq, tnos_msgq_data_t **pmsgq_data, u32 tim
     }
 
     irq_disable();
-    num = tnos_singal_wait_ms(&pmsgq->singal, timeout_ms);
-
-    if (num <= 0)
-    {
-        irq_enable();
-
-        return TNOS_ERR_TIMEOUT;
-    }
-
+    tnos_singal_wait_ms(&pmsgq->singal, (pmsgq->pos_head == 0) ? timeout_ms : 0);
     pos = pmsgq->pos_head;
 
-    if (pos == 0) //出现BUG,才会有
+    if (pos == 0)
     {
+        tnos_singal_cnt_clean(&pmsgq->singal);
         irq_enable();
 
-        return TNOS_ERR_BUG;
+        return 0;
     }
 
     pdata = POS2ADDR(pos);

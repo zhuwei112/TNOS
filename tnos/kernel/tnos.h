@@ -124,8 +124,8 @@ typedef struct
     u8             *pbuf;       //缓冲去起始位置(4字节对齐的位置)
     u16             size;       //一条消息最大大小
     u16             num_max;    //消息最大条数
-    u16             pos_head;   //头部位置
-    u16             pos_tail;   //尾部位置
+    u16 volatile    pos_head;   //头部位置
+    u16 volatile    pos_tail;   //尾部位置
     u16             pos_empty;  //空的位置
 }tnos_msgq_t;
 #endif
@@ -143,8 +143,8 @@ typedef struct
     tnos_singal_t   singal;     //信号
     u8             *pbuf;       //缓冲去起始位置(4字节对齐的位置)
     u16             buf_size;   //缓冲区大小
-    u16             pos_w;      //写的位置(一定为4的倍数)
-    u16             pos_r;      //读的位置(一定为4的倍数)
+    u16  volatile   pos_w;      //写的位置(一定为4的倍数)
+    u16  volatile   pos_r;      //读的位置(一定为4的倍数)
 }tnos_msgcyc_t;
 #endif
 

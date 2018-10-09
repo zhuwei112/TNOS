@@ -206,8 +206,6 @@ s32 tnos_msgcyc_send(tnos_msgcyc_t *pmsgc, const void *pbuf, u32 len)
  ***********************************************************/
 s32 do_tnos_msgq_rev_ptr(tnos_msgcyc_t *pmsgc, u8 **pbuf, u32 timeout_ms)
 {
-    s32 num;
-
     TNOS_ASSERT((pmsgc != NULL) && (pmsgc != NULL))
 
     *pbuf = NULL;
@@ -217,12 +215,7 @@ s32 do_tnos_msgq_rev_ptr(tnos_msgcyc_t *pmsgc, u8 **pbuf, u32 timeout_ms)
         return TNOS_ERR_OTHER;
     }
 
-    num = tnos_singal_wait_ms(&pmsgc->singal, timeout_ms);
-
-    if (num <= 0)
-    {
-        return TNOS_ERR_TIMEOUT;
-    }
+    tnos_singal_wait_ms(&pmsgc->singal, (pmsgc->pos_r != pmsgc->pos_w) ? 0 : timeout_ms);
 
     while (1)
     {
@@ -231,6 +224,7 @@ s32 do_tnos_msgq_rev_ptr(tnos_msgcyc_t *pmsgc, u8 **pbuf, u32 timeout_ms)
         if (pmsgc->pos_r == pmsgc->pos_w)
         {
             pmsgc->pos_r = pmsgc->pos_w = 0; //移到最开始,方便写分配空间
+            tnos_singal_cnt_clean(&pmsgc->singal);
             break;
         }
 
