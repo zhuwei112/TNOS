@@ -477,6 +477,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\..\tnos\tnos_test.c</FilePath>
             </File>
+            <File>
+              <FileName>tnos_cyc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\..\tnos\kernel\tnos_cyc.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

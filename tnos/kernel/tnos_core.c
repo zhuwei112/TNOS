@@ -969,23 +969,6 @@ void tnos_singal_clean(tnos_singal_t *psingal)
 }
 
 /***********************************************************
- * 功能描述：信号次数减一
- * 输入参数：psingal 信号结构体
- * 输出参数： 无
- * 返 回 值：  当前信号值
- ***********************************************************/
-u32 tnos_singal_cnt_del(tnos_singal_t *psingal)
-{
-    if (psingal->send_num > 0)
-    {
-        --psingal->send_num;
-    }
-
-    return psingal->send_num;
-}
-
-
-/***********************************************************
  * 功能描述：发送信号 (需禁止中断才能进入)
  * 输入参数：psingal 信号结构体
  *          tick_delay 当前任务需要延迟的tick数
@@ -996,10 +979,7 @@ void tnos_singal_send(tnos_singal_t *psingal)
 {
     list_t *plist;
 
-    if ((++psingal->send_num)>>31) //防止溢出
-    {
-        psingal->send_num = 0x80000000 - 1;
-    }
+    tnos_singal_cnt_add(psingal);
 
     plist = psingal->list_wait_head.next;
 
@@ -1013,10 +993,10 @@ void tnos_singal_send(tnos_singal_t *psingal)
         { //非当前任务,未在就绪队列中
             if (ptcb->list_run.next == NULL)
             {
-                    gs_is_signal_send = TRUE;
-                    list_remove(&ptcb->list_delay); //防止任务在定时队列中
-                    tnos_set_ready(ptcb, FALSE);
-                    tnos_sched_noral(0, FALSE);
+                gs_is_signal_send = TRUE;
+                list_remove(&ptcb->list_delay); //防止任务在定时队列中
+                tnos_set_ready(ptcb, FALSE);
+                tnos_sched_noral(0, FALSE);
             }
         }
     }

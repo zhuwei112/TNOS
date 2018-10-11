@@ -89,8 +89,6 @@ void get_time_tick2(time_tick_t *ptick)
  ***********************************************************/
 void tnos_tim_ms_set(u32 ms)
 {
-    u32 cnt;
-
     if (ms != 0)
     {
         TIM4->SR = 0;

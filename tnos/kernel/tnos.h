@@ -91,64 +91,6 @@ typedef struct tnos_tcb_arg
 }tnos_tcb_t;
 
 
-#if (TNOS_SEM_ENABLE != 0)
-typedef struct
-{
-    tnos_singal_t singal; //信号
-}tnos_sem_t;
-#endif
-
-
-#if (TNOS_MUTEX_ENABLE != 0)
-typedef struct
-{
-    tnos_tcb_t    *ptcb_send;  //发送任务的tcp
-    u32           lock_cnt;    //锁上的次数
-
-    //必须放到最后
-    tnos_singal_t singal;       //信号
-}tnos_mutex_t;
-#endif
-
-#if (TNOS_MSGQ_ENABLE != 0)
-//保证所有队列中的数据4字节对齐
-typedef struct
-{
-    u16 pos_next; //下一个的位置
-    u16 len;      //长度
-}tnos_msgq_data_t;
-
-typedef struct
-{
-    tnos_singal_t   singal;     //信号
-    u8             *pbuf;       //缓冲去起始位置(4字节对齐的位置)
-    u16             size;       //一条消息最大大小
-    u16             num_max;    //消息最大条数
-    u16 volatile    pos_head;   //头部位置
-    u16 volatile    pos_tail;   //尾部位置
-    u16             pos_empty;  //空的位置
-}tnos_msgq_t;
-#endif
-
-#if (TNOS_MSGCYC_ENABLE != 0)
-//保证所有队列中的数据4字节对齐
-typedef struct
-{
-    u16 pos_next; //下一个的位置
-    u16 len;      //长度 (为0,表示为空)
-}tnos_msgcyc_data_t;
-
-typedef struct
-{
-    tnos_singal_t   singal;     //信号
-    u8             *pbuf;       //缓冲去起始位置(4字节对齐的位置)
-    u16             buf_size;   //缓冲区大小
-    u16  volatile   pos_w;      //写的位置(一定为4的倍数)
-    u16  volatile   pos_r;      //读的位置(一定为4的倍数)
-}tnos_msgcyc_t;
-#endif
-
-
 /***********************************************************
  * 功能描述：板子应用初始化
  * 输入参数：无
@@ -316,6 +258,15 @@ s32 tnos_select(tnos_select_t *psel, u32 arary_num, u32 delay_ms);
 
 #if (TNOS_MUTEX_ENABLE != 0)
 
+typedef struct
+{
+    tnos_tcb_t    *ptcb_send;  //发送任务的tcp
+    u32           lock_cnt;    //锁上的次数
+
+    //必须放到最后
+    tnos_singal_t singal;       //信号
+}tnos_mutex_t;
+
 /***********************************************************
  * 功能描述：互斥锁 初始化
  * 输入参数：pmutex 互斥锁
@@ -352,6 +303,12 @@ void tnos_mutex_unlock(tnos_mutex_t *pmutex);
 #endif
 
 #if (TNOS_SEM_ENABLE != 0)
+
+typedef struct
+{
+    tnos_singal_t singal; //信号
+}tnos_sem_t;
+
 /***********************************************************
  * 功能描述：获取系统滴答时钟
  * 输入参数：psem 信号量
@@ -389,8 +346,126 @@ void tnos_sem_clean(tnos_sem_t *psem);
 
 #endif
 
+#if (TNOS_CYC_ENABLE != 0) //循环缓冲区(字节为单位)
+/******************************
+* 提供2种接收方法:
+* 法1: 带缓存保护方法 tnos_cyc_rev (需要多次复制和额外的缓冲区)
+* 法2: 不带缓冲区保护方法 tnos_cyc_rev_ptr 之后用 tnos_cyc_rev_mv 移动读位置
+ ***************************/
+
+typedef struct
+{
+    tnos_singal_t singal; //信号
+    u8           *pbuf;   //缓冲区位置
+    u16           size;   //缓冲区大小
+    u16           w_pos;  //写位置
+    u16           r_pos;  //读位置
+}tnos_cyc_t;
+
+typedef struct
+{
+    u8  *pdata_1;     //第一部分起始位置(长度不为0时有效)
+    u8  *pdata_2;     //第二部分起始位置(长度不为0时有效)
+    u16  len_data_1;  //第一数据位置长度
+    u16  len_data_2;  //第二段数据长度
+}tnos_cyc_ptr_t;
+
+
+/***********************************************************
+ * 功能描述 循环缓冲区 初始化
+ * 输入参数：pthis    消息循环区
+ *          pbuf      缓冲区起始位置
+ *          buf_size  缓冲区大小
+ * 输出参数： 无
+ * 返 回 值：无
+ *  ***********************************************************/
+void tnos_cyc_init(tnos_cyc_t *pthis, void *pbuf, u32 buf_size);
+
+/***********************************************************
+ * 功能描述 循环缓冲区 清空
+ * 输入参数：pthis    消息循环区
+ * 输出参数： 无
+ * 返 回 值：  无
+ ***********************************************************/
+void tnos_cyc_clean(tnos_cyc_t *pthis);
+
+/***********************************************************
+ * 功能描述 循环缓冲区剩余大小
+ * 输入参数：pthis    消息循环区
+ * 输出参数： 无
+ * 返 回 值：  剩余可用大小
+ ***********************************************************/
+u32 tnos_cyc_less(tnos_cyc_t *pthis);
+
+/***********************************************************
+ * 功能描述：循环缓冲区 已经写入的个数
+ * 输入参数： pthis  自身
+ * 输出参数： 无
+ * 返 回 值： 剩余可用大小
+ ***********************************************************/
+u32 tnos_cyc_have(tnos_cyc_t *pthis);
+
+/***********************************************************
+ * 功能描述：循环缓冲区 写入数据
+ * 输入参数： pthis  自身
+ *           pbuf   写入的位置
+ *           len    写入长度
+ * 输出参数： 无
+ * 返 回 值： 0:成功  其它:失败 (剩余空间不够不会写入)
+ ***********************************************************/
+s32 tnos_cyc_send(tnos_cyc_t *pthis, const void *pbuf, u32 len);
+
+/***********************************************************
+ * 功能描述：循环缓冲区 读取(指针不移动 mv才移动)
+ * 输入参数： pthis  自身
+ *           pbuf   读缓冲区起始
+ *           len    读的长度
+ *           timeout_ms 超时时间
+ * 输出参数： 无
+ * 返 回 值：读取的长度
+ ***********************************************************/
+u32 tnos_cyc_rev(tnos_cyc_t *pthis, void *pbuf, u32 len, u32 timeout_ms);
+
+/***********************************************************
+ * 功能描述：循环缓冲区 读取(指针不移动 mv才移动)
+ * 输入参数： pthis  自身
+ * 输出参数： pbf 读数据的位置
+ * 返 回 值：无
+ ***********************************************************/
+void tnos_cyc_rev_ptr(tnos_cyc_t *pthis, tnos_cyc_ptr_t *pbf, u32 timeout_ms);
+
+/***********************************************************
+ * 功能描述：循环缓冲区写入数据
+ * 输入参数： pthis  自身
+ *           len    写入长度
+ * 输出参数： 无
+ * 返 回 值：是否为空
+ ***********************************************************/
+BOOL tnos_cyc_rev_mv(tnos_cyc_t *pthis, u32 len);
+
+#endif
+
 
 #if (TNOS_MSGQ_ENABLE != 0) //消息队列
+//保证所有队列中的数据4字节对齐
+typedef struct
+{
+    u16 pos_next; //下一个的位置
+    u16 len;      //长度
+}tnos_msgq_data_t;
+
+typedef struct
+{
+    tnos_singal_t   singal;     //信号
+    u8             *pbuf;       //缓冲去起始位置(4字节对齐的位置)
+    u16             size;       //一条消息最大大小
+    u16             num_max;    //消息最大条数
+    u16 volatile    pos_head;   //头部位置
+    u16 volatile    pos_tail;   //尾部位置
+    u16             pos_empty;  //空的位置
+}tnos_msgq_t;
+
+
 /******************************
  * 不允许发长度为0的数据(发送不出去)
  * 提供2种发送方法:
@@ -532,7 +607,24 @@ void tnos_msgq_clean(tnos_msgq_t *pmsgq);
 
 #endif
 
-#if (TNOS_MSGCYC_ENABLE != 0) //消息循环缓冲
+#if (TNOS_MSGCYC_ENABLE != 0) //消息循环缓冲 (消息为单位)
+
+//保证所有队列中的数据4字节对齐
+typedef struct
+{
+    u16 pos_next; //下一个的位置
+    u16 len;      //长度 (为0,表示为空)
+}tnos_msgcyc_data_t;
+
+typedef struct
+{
+    tnos_singal_t   singal;     //信号
+    u8             *pbuf;       //缓冲去起始位置(4字节对齐的位置)
+    u16             buf_size;   //缓冲区大小
+    u16  volatile   pos_w;      //写的位置(一定为4的倍数)
+    u16  volatile   pos_r;      //读的位置(一定为4的倍数)
+}tnos_msgcyc_t;
+
 /******************************
  * 不允许发长度为0的数据(发送不出去)
 

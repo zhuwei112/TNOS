@@ -13,7 +13,7 @@
 
 #define TNOS_VER_MAJOR                  1UL //主版本号
 #define TNOS_VER_SUB                    0UL //分版本号
-#define TNOS_VER_REVISE                 2UL //低版本号
+#define TNOS_VER_REVISE                 3UL //低版本号
 
 //版本的值
 #define TNOS_VER    ((TNOS_VER_MAJOR * 10000) + (TNOS_VER_SUB * 100) + TNOS_VER_REVISE)
